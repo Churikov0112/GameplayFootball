@@ -3,6 +3,9 @@
 // i do not offer support, so don't ask. to be used for inspiration :)
 
 #ifdef WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -269,7 +272,7 @@ class ThreadHudThread : public Thread {
 };
 
 
-int main(int argc, const char** argv) {
+int main(int argc, char** argv) {
 
   config = new Properties();
   if (argc > 1) configFile = argv[1];

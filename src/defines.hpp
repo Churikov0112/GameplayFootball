@@ -6,6 +6,9 @@
 #define _HPP_DEFINES
 
 #ifdef WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
