@@ -56,3 +56,16 @@ AGENTS.md, `docs/wiki/` (архитектура, матч, база-данных
 `(Stat){...}` в `utils.cpp`, сигнатура `main(int, char**)`, условное `dl`/`m` только под UNIX
 в `CMakeLists.txt`. Ветку `windows` целиком не вливаем (проверено её содержимое: устаревший
 вендорный sqlite3 и лишние правки).
+
+## [2026-08-10] feat | Ворота №1: детерминированный headless-раннер (ветка `determinism-gate`)
+Перенесены из GRF (ветка `google-brain` = GRF v2.10.1) только архитектурные механизмы, без
+изменения геймплея: `EnvState`-сериализатор (`defines.hpp`), отвязка времени в `Match::Process`
+(фиксированный шаг 10 мс вместо реальных часов), `randomize(seed)` (srand + boost + fastrandom),
+`ProcessState` для ядра Match/Ball/Player/PlayerBase (только совпадающие поля, без
+AI/humanoid-внутренностей). Вынесен игровой контекст из `main.cpp` в `src/gamecontext.*`.
+Добавлен `tools/determinism` (режимы `run`/`check`) с эталоном `reference.txt`, `MockRenderer3D`
+для headless-рендера (`graphics3d_renderer=mock`). При отладке найден и исправлен баг
+неинициализированной памяти: `tacticalSituation.forwardRating` и `dynamicFormationEntry`
+запасных игроков не инициализировались в ctor — это и был источник недетерминизма.
+Оценка геймплея GRF: играется похоже, но Google меняли ощущения (автопилот, переключение,
+пас) — игровую логику GRF в master не переносим.
