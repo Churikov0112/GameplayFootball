@@ -169,6 +169,8 @@ class Match {
 
     void BumpActualTime_ms(unsigned long time);
 
+    void ProcessState(EnvState *state);
+
     void GameOver();
 
     void GetCameraParams(float &zoom, float &height, float &fov, float &angleFactor);

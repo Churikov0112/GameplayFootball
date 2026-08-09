@@ -853,6 +853,46 @@ void Match::BumpActualTime_ms(unsigned long time) {
   actualTime_ms += time;
 }
 
+void Match::ProcessState(EnvState *state) {
+  // Players (both teams).
+  std::vector<Player*> players;
+  for (int t = 0; t < 2; t++) {
+    teams[t]->GetAllPlayers(players);
+  }
+  for (auto &player : players) {
+    player->ProcessState(state);
+  }
+
+  ball->ProcessState(state);
+
+  state->process(matchTime_ms);
+  state->process(actualTime_ms);
+  state->process(goalScoredTimer);
+  state->process(matchPhase);
+  state->process(inPlay);
+  state->process(inSetPiece);
+  state->process(goalScored);
+  state->process(ballIsInGoal);
+  state->process(lastGoalTeamID);
+
+  // Pointer fields are serialized as player IDs (determinism snapshot only).
+  int lastGoalScorerID = lastGoalScorer ? lastGoalScorer->GetID() : -1;
+  state->process(lastGoalScorerID);
+
+  for (int &v : lastTouchTeamIDs) state->process(v);
+  state->process(lastTouchTeamID);
+  state->process(bestPossessionTeamID);
+
+  int designatedPossessionPlayerID = designatedPossessionPlayer ? designatedPossessionPlayer->GetID() : -1;
+  state->process(designatedPossessionPlayerID);
+  int ballRetainerID = ballRetainer ? ballRetainer->GetID() : -1;
+  state->process(ballRetainerID);
+
+  state->process(autoUpdateIngameCamera);
+  state->process(cameraOrientation);
+  state->process(cameraNodeOrientation);
+}
+
 void Match::Process() {
 
   // Simulation time is advanced internally (10 ms per Process call); it is not

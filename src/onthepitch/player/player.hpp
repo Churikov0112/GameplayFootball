@@ -88,6 +88,8 @@ class Player : public PlayerBase {
     void GiveRedCard(unsigned long giveTime_ms) { cards += 3; cardEffectiveTime_ms = giveTime_ms; }
     int GetCards() const { return cards; }
 
+    void ProcessState(EnvState *state);
+
     void SendOff();
 
     float GetStaminaStat() const;
@@ -97,8 +99,6 @@ class Player : public PlayerBase {
 
   protected:
     void _CalculateTacticalSituation();
-
-    void ProcessState(EnvState *state);
 
     Team *team;
 
