@@ -580,3 +580,20 @@ void Player::_CalculateTacticalSituation() {
       std::pow(tacticalSituation.forwardRating,
                1.5f);  // more important when close to goal
 }
+
+void Player::ProcessState(EnvState *state) {
+  ProcessStateBase(state);
+  state->process(dynamicFormationEntry);
+  state->process(hasPossession);
+  state->process(hasBestPossession);
+  state->process(hasUniquePossession);
+  state->process(possessionDuration_ms);
+  state->process(timeNeededToGetToBall_ms);
+  state->process(timeNeededToGetToBall_optimistic_ms);
+  state->process(timeNeededToGetToBall_previous_ms);
+  state->process(triggerControlledBallCollision);
+  state->process(tacticalSituation);
+  state->process(desiredTimeToBall_ms);
+  state->process(cards);
+  state->process(cardEffectiveTime_ms);
+}

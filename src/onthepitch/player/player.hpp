@@ -98,6 +98,8 @@ class Player : public PlayerBase {
   protected:
     void _CalculateTacticalSituation();
 
+    void ProcessState(EnvState *state);
+
     Team *team;
 
     signed int manMarkingID;

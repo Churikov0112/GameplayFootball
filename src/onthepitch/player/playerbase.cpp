@@ -152,3 +152,20 @@ void PlayerBase::ResetSituation(const Vector3 &focusPos) {
   if (IsActive()) humanoid->ResetSituation(focusPos);
   if (GetController()) GetController()->Reset();
 }
+
+void PlayerBase::ProcessStateBase(EnvState *state) {
+  state->process(isActive);
+  state->process(lastTouchTime_ms);
+  state->process(lastTouchType);
+  state->process(fatigueFactorInv);
+  int size = positionHistoryPerSecond.size();
+  state->process(size);
+  positionHistoryPerSecond.resize(size);
+  for (auto &v : positionHistoryPerSecond) state->process(v);
+  // Instead of serializing humanoid/controller internals (rewritten AI in GRF),
+  // snapshot the player position and movement, which reflect AI decisions.
+  Vector3 pos = humanoid ? humanoid->GetPosition() : Vector3(0, 0, 0);
+  Vector3 mov = humanoid ? humanoid->GetMovement() : Vector3(0, 0, 0);
+  state->process(pos);
+  state->process(mov);
+}

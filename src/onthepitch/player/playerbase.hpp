@@ -69,6 +69,8 @@ class PlayerBase {
     virtual void FetchPutBuffers(unsigned long putTime_ms);
     void Put();
 
+    void ProcessStateBase(EnvState *state);
+
     void UpdateFullbodyNodes() { humanoid->UpdateFullbodyNodes(); }
     bool NeedsModelUpdate() { return humanoid->NeedsModelUpdate(); }
     void UpdateFullbodyModel() { humanoid->UpdateFullbodyModel(); }
