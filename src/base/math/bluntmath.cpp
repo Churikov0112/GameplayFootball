@@ -70,6 +70,16 @@ namespace blunted {
     rng.engine().seed(static_cast<unsigned int>(std::time(0)));
   }
 
+  void randomseed(unsigned int seed) {
+    rng.engine().seed(seed);
+  }
+
+  void randomize(unsigned int seed) {
+    srand(seed);
+    rand(); // mingw32? buggy compiler? first value seems bogus
+    randomseed(seed); // for the boost random
+  }
+
   inline real boostrandom() {
     return rng();
   }
