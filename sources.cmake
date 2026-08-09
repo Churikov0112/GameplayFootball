@@ -379,7 +379,6 @@ set(CORE_HEADERS
    src/main.hpp
    src/gametask.hpp
    src/dbquery.hpp
-   src/gamecontext.hpp
    src/misc/hungarian.h
 )
 
@@ -390,8 +389,15 @@ set(CORE_SOURCES
    src/utils.cpp
    src/main.cpp
    src/dbquery.cpp
-   src/gamecontext.cpp
    src/gamedefines.cpp
+)
+
+set(GAMECONTEXT_HEADERS
+   src/gamecontext.hpp
+)
+
+set(GAMECONTEXT_SOURCES
+   src/gamecontext.cpp
 )
 
 set(GAME_HEADERS

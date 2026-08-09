@@ -71,8 +71,7 @@ class PlayerBase {
 
     void ProcessStateBase(EnvState *state);
 
-    void UpdateFullbodyNodes() { humanoid->UpdateFullbodyNodes(); }
-    bool NeedsModelUpdate() { return humanoid->NeedsModelUpdate(); }
+    void UpdateFullbodyNodes() { humanoid->UpdateFullbodyNodes(); }    bool NeedsModelUpdate() { return humanoid->NeedsModelUpdate(); }
     void UpdateFullbodyModel() { humanoid->UpdateFullbodyModel(); }
 
     virtual float GetStat(const char *name) const;

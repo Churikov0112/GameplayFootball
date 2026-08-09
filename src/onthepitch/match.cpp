@@ -864,7 +864,6 @@ void Match::ProcessState(EnvState *state) {
   }
 
   ball->ProcessState(state);
-
   state->process(matchTime_ms);
   state->process(actualTime_ms);
   state->process(goalScoredTimer);
@@ -889,8 +888,6 @@ void Match::ProcessState(EnvState *state) {
   state->process(ballRetainerID);
 
   state->process(autoUpdateIngameCamera);
-  state->process(cameraOrientation);
-  state->process(cameraNodeOrientation);
 }
 
 void Match::Process() {

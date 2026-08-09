@@ -96,8 +96,9 @@ add_library(gamelib ${GAME_SOURCES} ${GAME_HEADERS})
 add_library(hidlib ${HID_SOURCES} ${HID_HEADERS})
 add_library(menulib ${MENU_SOURCES} ${MENU_HEADERS})
 add_library(datalib ${DATA_SOURCES} ${DATA_HEADERS})
+add_library(gamecontextlib ${GAMECONTEXT_SOURCES} ${GAMECONTEXT_HEADERS})
 
-set(LIBRARIES gamelib hidlib menulib datalib leaguelib blunted2
+set(LIBRARIES gamelib hidlib menulib datalib leaguelib gamecontextlib blunted2
    Boost::filesystem Boost::system Boost::thread SQLite::SQLite3
    ${SDL2_IMAGE_LIBRARIES} ${SDL2_TTF_LIBRARIES} ${SDL2_GFX_LIBRARIES}
    ${SDL2_LIBRARIES} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
@@ -107,3 +108,10 @@ endif(UNIX)
 
 add_executable(gameplayfootball WIN32 ${CORE_SOURCES} ${CORE_HEADERS})
 target_link_libraries(gameplayfootball ${LIBRARIES})
+
+# determinism_runner needs the core sources (utils, gamedefines, gametask, dbquery, misc)
+# but NOT main.cpp (which would conflict with its own main()).
+list(REMOVE_ITEM CORE_SOURCES src/main.cpp)
+list(REMOVE_ITEM CORE_HEADERS src/main.hpp)
+add_executable(determinism_runner tools/determinism/main.cpp ${CORE_SOURCES} ${CORE_HEADERS})
+target_link_libraries(determinism_runner ${LIBRARIES})

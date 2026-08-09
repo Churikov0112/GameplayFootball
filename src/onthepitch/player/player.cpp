@@ -51,6 +51,11 @@ Player::Player(Team *team, PlayerData *playerData) : PlayerBase(team->GetMatch()
   tacticalSituation.forwardSpaceRating = 0;
   tacticalSituation.toGoalSpaceRating = 0;
   tacticalSituation.spaceRating = 0;
+  tacticalSituation.forwardRating = 0;
+
+  dynamicFormationEntry.role = e_PlayerRole_GK;
+  dynamicFormationEntry.databasePosition = Vector3(0);
+  dynamicFormationEntry.position = Vector3(0);
 
   cards = 0;
 
@@ -556,6 +561,7 @@ void Player::ResetSituation(const Vector3 &focusPos) {
   tacticalSituation.forwardSpaceRating = 0;
   tacticalSituation.toGoalSpaceRating = 0;
   tacticalSituation.spaceRating = 0;
+  tacticalSituation.forwardRating = 0;
 }
 
 void Player::_CalculateTacticalSituation() {
@@ -588,9 +594,6 @@ void Player::ProcessState(EnvState *state) {
   state->process(hasBestPossession);
   state->process(hasUniquePossession);
   state->process(possessionDuration_ms);
-  state->process(timeNeededToGetToBall_ms);
-  state->process(timeNeededToGetToBall_optimistic_ms);
-  state->process(timeNeededToGetToBall_previous_ms);
   state->process(triggerControlledBallCollision);
   state->process(tacticalSituation);
   state->process(desiredTimeToBall_ms);

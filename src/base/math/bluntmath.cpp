@@ -5,6 +5,7 @@
 #include "bluntmath.hpp"
 
 #include <cmath>
+#include <limits>
 
 #include <boost/random.hpp>
 
@@ -78,6 +79,8 @@ namespace blunted {
     srand(seed);
     rand(); // mingw32? buggy compiler? first value seems bogus
     randomseed(seed); // for the boost random
+    fastrandseed = seed; // deterministic fast RNG
+    max_uint = std::numeric_limits<unsigned int>::max();
   }
 
   inline real boostrandom() {

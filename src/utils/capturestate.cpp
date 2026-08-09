@@ -18,8 +18,8 @@ std::string CaptureMatchState(Match *match) {
   sha.get_digest(digest);
 
   std::ostringstream oss;
-  for (int i = 0; i < 5; i++) {
-    oss << std::hex << std::setw(8) << std::setfill('0') << digest[i];
+  for (int i = 0; i < 20; i++) {
+    oss << std::hex << std::setw(2) << std::setfill('0') << (int)digest[i];
   }
   return oss.str();
 }
