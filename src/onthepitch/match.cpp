@@ -848,11 +848,15 @@ void Match::UpdateIngameCamera() {
 void Match::Get() {
 }
 
+void Match::BumpActualTime_ms(unsigned long time) {
+  if (IsInPlay() && !IsInSetPiece()) matchTime_ms += time * (1.0f / matchDurationFactor);
+  actualTime_ms += time;
+}
+
 void Match::Process() {
 
-  unsigned long time_ms = EnvironmentManager::GetInstance().GetTime_ms() - gameSequenceInfo.startTime_ms;
-  timeSincePreviousProcess_ms = time_ms - GetPreviousProcessTime_ms();
-  previousProcessTime_ms = time_ms;
+  // Simulation time is advanced internally (10 ms per Process call); it is not
+  // tied to the real-time clock, which makes headless runs deterministic.
 
   if (UserEventManager::GetInstance().GetKeyboardState(SDLK_F1)) {
     SetRandomSunParams();

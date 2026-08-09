@@ -167,6 +167,8 @@ class Match {
     unsigned long GetMatchTime_ms() const { return matchTime_ms; }
     unsigned long GetActualTime_ms() const { return actualTime_ms; }
 
+    void BumpActualTime_ms(unsigned long time);
+
     void GameOver();
 
     void GetCameraParams(float &zoom, float &height, float &fov, float &angleFactor);
