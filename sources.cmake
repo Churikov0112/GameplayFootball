@@ -280,6 +280,7 @@ set(UTILS_HEADERS
         src/utils/directoryparser.hpp
         src/utils/threadhud.hpp
         src/utils/console.hpp
+        src/utils/capturestate.hpp
         )
 
 set(UTILS_EXT_HEADERS
@@ -299,6 +300,7 @@ set(UTILS_SOURCES
         src/utils/xmlloader.cpp
         src/utils/animationextensions/footballanimationextension.cpp
         src/utils/console.cpp
+        src/utils/capturestate.cpp
         )
 
 set(UTILS_GUI2_HEADERS
