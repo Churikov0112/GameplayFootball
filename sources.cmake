@@ -73,6 +73,7 @@ set(SYSTEMS_GRAPHICS_RESOURCES_HEADERS
 set(SYSTEMS_GRAPHICS_RENDERING_HEADERS
         src/systems/graphics/rendering/interface_renderer3d.hpp
         src/systems/graphics/rendering/opengl_renderer3d.hpp
+        src/systems/graphics/rendering/mock_renderer3d.hpp
         src/systems/graphics/rendering/r3d_messages.hpp
         )
 

@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
 
   Properties config;
   config.LoadFile("football.config");
+  config.Set("graphics3d_renderer", "mock");  // headless: no window / GL context
 
   Initialize(config);
   if (!InitGameContext(config)) ::exit(1);

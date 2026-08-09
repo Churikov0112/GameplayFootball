@@ -12,6 +12,7 @@
 #include "managers/resourcemanagerpool.hpp"
 
 #include "rendering/r3d_messages.hpp"
+#include "rendering/mock_renderer3d.hpp"
 
 namespace blunted {
 
@@ -32,6 +33,7 @@ namespace blunted {
 
     // start thread for renderer
     if (config.Get("graphics3d_renderer", "opengl") == "opengl") renderer3DTask = new OpenGLRenderer3D();
+    else renderer3DTask = new MockRenderer3D();
     width = config.GetInt("context_x", 1280);
     height = config.GetInt("context_y", 720);
     bpp = config.GetInt("context_bpp", 32);
