@@ -40,7 +40,7 @@ SQLite3, SDL2/OpenGL (не используются раннером), стар�
 |---|---|
 | `src/gamecontext.hpp`, `src/gamecontext.cpp` | **создать**: глобальные переменные игрового контекста (scene2D, scene3D, db, config, menuTask, gameTask, pilons, controllers) + геттеры + `InitGameContext()`/`ShutdownGameContext()`. Выносится из `main.cpp`. |
 | `src/main.cpp` | **изменить**: убрать вынесенное в gamecontext, оставить `main()`, `Run()`, тест-обвязку. |
-| `src/defines.hpp`, `src/defines.cpp` | **изменить**: добавить `EnvState` (raw-memcpy сериализатор) + `randomize(unsigned int)`. |
+| `src/defines.hpp` | **изменить**: добавить `EnvState` (raw-memcpy сериализатор) + `randomize(unsigned int)`. **`src/defines.cpp` в master НЕ существует** — randomize добавляем как inline в `defines.hpp` (или в `src/base/math/bluntmath.cpp` рядом с `randomseed()`). |
 | `src/onthepitch/match.cpp`, `match.hpp` | **изменить**: отвязка времени в `Process()`; добавить `BumpActualTime_ms`, `ProcessState(EnvState*)`. |
 | `src/onthepitch/ball.cpp`, `ball.hpp` | **изменить**: добавить `ProcessState(EnvState*)`. |
 | `src/onthepitch/player/player.cpp`, `player.hpp` | **изменить**: добавить `ProcessState(EnvState*)` (Player). |
@@ -298,21 +298,23 @@ class EnvState {
 нашего эталона достаточно односторонней записи. `Log` доступен через
 `#include "base/log.hpp"` (уже есть в `defines.hpp` окружении).
 
-- [ ] **Step 3: Добавить `randomize(unsigned int)` в `src/defines.cpp`**
+- [ ] **Step 3: Добавить `randomize(unsigned int)`**
 
-Из google-brain (`src/main.cpp`):
+Из google-brain (`src/main.cpp`). **`src/defines.cpp` в master нет** — добавляем
+inline в конец `src/defines.hpp` (в namespace blunted):
 
 ```cpp
-void randomize(unsigned int seed) {
+inline void randomize(unsigned int seed) {
   srand(seed);
   rand(); // mingw32? buggy compiler? first value seems bogus
   randomseed(seed); // for the boost random
 }
 ```
 
-(Перегрузка поверх существующего `randomseed()` без аргумента; проверь, что
-`randomseed` объявлен в `blunted.hpp`/`defines.hpp` — при необходимости
-объявить `void randomize(unsigned int seed);` в `defines.hpp`.)
+(`randomseed(unsigned int)` объявлен в `src/base/math/bluntmath.hpp` — проверить,
+что принимает аргумент; в master объявлен `void randomseed();` без аргумента —
+при необходимости добавить перегрузку `randomseed(unsigned int)` в
+`bluntmath.hpp`/`.cpp`.)
 
 - [ ] **Step 4: Собрать**
 
@@ -322,7 +324,7 @@ Expected: компилируется (EnvState не используется н�
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/defines.hpp src/defines.cpp
+git add src/defines.hpp src/base/math/bluntmath.hpp src/base/math/bluntmath.cpp
 git commit -m "feat: add EnvState serializer and randomize(seed) from GRF"
 ```
 
@@ -527,11 +529,11 @@ void Player::ProcessState(EnvState *state) {
 
 **ВНИМАНИЕ:** имя базового метода — `ProcessStateBase` (в GRF так назван метод
 PlayerBase). Соответственно в Step 1 назвать метод именно `ProcessStateBase`,
-а `Player::ProcessState` вызывает его. `tacticalSituation`/`FormationEntry`
-сериализуются как POD-структуры (у них нет `ProcessState` в master — 
-`dynamicFormationEntry.ProcessState` взять из GRF или заменить на
-`state->process(dynamicFormationEntry)` если FormationEntry — тривиальная
-структура; проверить `FormationEntry` в `gamedefines.hpp`).
+а `Player::ProcessState` вызывает его. `FormationEntry` — тривиальная POD
+(enum + 3 Vector3, `gamedefines.hpp:249`), поэтому `dynamicFormationEntry`
+сериализуем через `state->process(dynamicFormationEntry)` (memcpy), а не
+через `.ProcessState()`. `TacticalPlayerSituation` — тоже POD (4 float),
+можно сериализовать полями.
 
 - [ ] **Step 3: Собрать**
 
