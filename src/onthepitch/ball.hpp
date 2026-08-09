@@ -78,6 +78,8 @@ class Ball {
 
     void ResetSituation(const Vector3 &focusPos);
 
+    void ProcessState(EnvState *state);
+
   protected:
     boost::shared_ptr<Scene3D> scene3D;
 
