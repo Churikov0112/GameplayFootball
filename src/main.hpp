@@ -65,6 +65,27 @@ boost::intrusive_ptr<Image2D> GetDebugImage();
 boost::intrusive_ptr<Image2D> GetDebugOverlay();
 void GetDebugOverlayCoord(Match *match, const Vector3 &worldPos, int &x, int &y);
 
+extern boost::intrusive_ptr<Image2D> debugImage;
+extern boost::intrusive_ptr<Image2D> debugOverlay;
+
+extern GraphicsSystem *graphicsSystem;
+extern boost::shared_ptr<Scene2D> scene2D;
+extern boost::shared_ptr<Scene3D> scene3D;
+extern boost::shared_ptr<GameTask> gameTask;
+extern boost::shared_ptr<MenuTask> menuTask;
+extern Database *db;
+extern Properties *config;
+extern std::vector<IHIDevice*> controllers;
+extern std::string configFile;
+
+extern boost::intrusive_ptr<Geometry> greenPilon;
+extern boost::intrusive_ptr<Geometry> bluePilon;
+extern boost::intrusive_ptr<Geometry> yellowPilon;
+extern boost::intrusive_ptr<Geometry> redPilon;
+extern boost::intrusive_ptr<Geometry> smallDebugCircle1;
+extern boost::intrusive_ptr<Geometry> smallDebugCircle2;
+extern boost::intrusive_ptr<Geometry> largeDebugCircle;
+
 int PredictFrameTimeToGo_ms(int frameCount);
 
 const std::vector<IHIDevice*> &GetControllers();
