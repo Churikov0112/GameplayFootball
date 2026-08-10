@@ -4,12 +4,12 @@ This file provides guidance to agents working with code in this repository.
 
 ## Что это
 
-3D-футбольная игра на C++14 (CMake), форк заброшенного GameplayFootball
-([BazkieBumpercar](https://github.com/BazkieBumpercar/GameplayFootball)): обновлён до SDL2/OpenGL/OpenAL/Boost/SQLite3
+3D-футбольная игра на C++17 (CMake 3.16+), форк заброшенного GameplayFootball
+([BazkieBumpercar](https://github.com/BazkieBumpercar/GameplayFootball)): обновлён до SDL3/OpenGL/OpenAL/Boost/SQLite3
 и собран по изменениям Google Brain (ветка `google_brain`). Цель репозитория — собираться и запускаться на как
 можно большем числе платформ. Движок «Blunted2» лежит в репозитории (`src/base`, `src/types`, `src/scene`,
 `src/systems`, `src/managers`, `src/framework`); игра поверх него — `src/onthepitch`, `src/menu`, `src/league`, `src/data`.
-Windows: сборка только x86 (Win32). macOS: компилируется, но не запускается.
+Windows: локально x86 (Win32), CI дополнительно собирает x64. macOS: компилируется, но не запускается.
 
 **Актуальная картина проекта живёт в вики: `docs/wiki/index.md` — начинать оттуда.** Этот файл
 несёт только то, что сломаешь, *не зная, где посмотреть*; предметные детали — в вики, а
@@ -21,7 +21,7 @@ Windows: сборка только x86 (Win32). macOS: компилируетс�
 `SystemManager` (GraphicsSystem + AudioSystem) → сцены `Scene2D`/`Scene3D` → `Scheduler` с двумя
 `TaskSequence` → `Run()`.
 
-Две последовательности задач (см. `src/main.cpp:420`, `src/main.cpp:441`):
+Две последовательности задач (см. `src/main.cpp:188`, `src/main.cpp:209`):
 
 - **`game`** — тик 10 мс (`physics_frametime_ms`): `MenuTask` и `GameTask` в фазах Get/Process;
 - **`graphics`** — непрерывный: `GameTask::Put` + `GraphicsSystem` Get/Process/Put (рендер в отдельном потоке).
@@ -32,8 +32,8 @@ Get/Process/Put и буферами (см. `docs/wiki/матч`). AI игрок�
 
 ### Ловушки (каждая ломается молча)
 
-- **Физика (ODE) НЕ компилируется.** Исходники `src/systems/physics/*` объявлены в `sources.cmake`, но в
-  `CMakeLists.txt` не включены в сборку (комментарий: «not compiling physics, as not used by gameplayfootball»).
+- **Физика (ODE) НЕ компилируется.** Исходники `src/systems/physics/*` не включены в сборку
+  (`CMakeLists.txt`, комментарий: «not compiling physics, as not used by gameplayfootball»).
   Правки там не соберутся. `tools/animator` — единственное место, где физика подключается.
 - **Запуск — из каталога сборки с копией `data/`.** Все пути относительные CWD: база
   `databases/default/database.sqlite`, конфиг `football.config`, `media/...`. Без копии `data/` игра
@@ -47,8 +47,9 @@ Get/Process/Put и буферами (см. `docs/wiki/матч`). AI игрок�
   `EnvironmentManager::GetTime_ms()`; не заводи параллельное время.
 - **Boost-идиомы вместо std**: `boost::intrusive_ptr`/`boost::shared_ptr`, `boost::signals2`,
   `boost::thread`. Не заменяй на std:: — код написан под boost.
-- **Windows**: инклюды вида `#include <SDL2/SDL.h>`; vcpkg-триплеты строго `x86-windows`;
+- **Windows**: инклюды вида `#include <SDL3/SDL.h>`; vcpkg-триплеты строго `x86-windows`;
   CMake — `CMAKE_GENERATOR_PLATFORM=Win32`; для MinGW в `main.cpp` стоит `#undef main`.
+  Игра — GUI (`WIN32`): в `src/main.cpp` собственная WinMain-заглушка (SDL3 не даёт SDLmain).
 - **`google_brain` и `windows` — чужие ветки.** Это форк Google Brain RL и отдельная Windows-линия;
   не вливай их целиком в `master` без разбора.
 - **`dataSetSortable`** (закомментирован в `src/gamedefines.hpp:70`) меняет тип `DataSet`
@@ -58,8 +59,8 @@ Get/Process/Put и буферами (см. `docs/wiki/матч`). AI игрок�
 
 Команды взяты из `README.md` и `CMakeLists.txt`.
 
-**Linux** (deps: `apt-get install ... libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-gfx-dev
-libopenal-dev libboost-all-dev libsqlite3-dev`):
+**Linux** (deps: `apt-get install ... libsdl3-dev libsdl3-image-dev libsdl3-ttf-dev
+libopenal-dev libboost-all-dev libsqlite3-dev`; пакеты SDL3 есть с Ubuntu 26.04):
 
 ```bash
 cp -R data/. build          # данные обязаны лежать рядом с бинарником
@@ -72,7 +73,7 @@ make -j$(nproc)
 **Windows** (vcpkg, триплеты **обязательно** `x86-windows`):
 
 ```bat
-.\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl2 sdl2-image[libjpeg-turbo] sdl2-ttf sdl2-gfx opengl openal-soft
+.\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl3 sdl3-image[jpeg,png] sdl3-ttf openal-soft sqlite3
 xcopy /e /i data build\Debug
 xcopy /e /i data build\Release
 cd build
@@ -81,8 +82,10 @@ cmake --build . --parallel --config Release
 :: запуск: gameplayfootball.exe внутри build\Release
 ```
 
-**macOS**: собирается через brew (sdl2 sdl2_image sdl2_ttf sdl2_gfx boost openal-soft), но **не запускается**
+**macOS**: собирается через brew (sdl3 sdl3_image sdl3_ttf boost openal-soft), но **не запускается**
 (рендеринг обязан идти в main thread — см. `docs/wiki/открытые-вопросы`).
+
+CI — `.github/workflows/build.yml`: сборка + determinism check на Linux/Windows (macOS — только сборка).
 
 Тестов и линта в проекте нет — проверка компиляцией: `cmake --build` в каталоге сборки.
 

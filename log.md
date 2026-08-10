@@ -69,3 +69,16 @@ AI/humanoid-внутренностей). Вынесен игровой конт�
 запасных игроков не инициализировались в ctor — это и был источник недетерминизма.
 Оценка геймплея GRF: играется похоже, но Google меняли ощущения (автопилот, переключение,
 пас) — игровую логику GRF в master не переносим.
+
+## [2026-08-10] feat | Модернизация сборки: CMake 3.16+/C++17, SDL2→SDL3, CI (ветка `build-modernization`)
+CMake поднят до 3.16, включён C++17 (`c3bdb61`); источники сведены в единый статический `blunted2`,
+`sources.cmake` удалён (`858f09b`); SDL2→SDL3 в инклюдах и API, SDL_gfx убран полностью
+(в vcpkg порта sdl3-gfx нет; заменён на `SDL_ScaleSurface`) (`e138cff`). Эталон детерминизма сделан
+воспроизводимым между пересборками (`fb3a90f`): `determinism_runner` в начале фиксирует ключи конфига
+(`graphics3d_renderer=mock`, `match_difficulty=0.8`, `match_duration=1.0`). Добавлен CI
+`.github/workflows/build.yml` (4 job: linux сборка+check, windows-x86 check, windows-x64 capture,
+macos сборка) и эталоны на платформу: x86 `reference.txt`=`372c4bbd...`, x64
+`reference-windows-x64.txt`=`4e9ddb72...` (снят локально; отличается от x86 — эталон платформозависим),
+`reference-linux.txt` снимается первым CI-прогоном (TODO, Task 6). Linux-job привязан к `ubuntu-26.04`
+(apt-пакеты SDL3 есть только с 26.04; `ubuntu-latest` всё ещё 24.04). Обновлены вики, AGENTS.md,
+README. Первый прогон CI — после push (Task 6).

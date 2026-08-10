@@ -10,10 +10,11 @@ The goal of this repository is to update the existing code, based on Google Brai
 ### Linux
 Install required dependencies: 
 ```bash
-sudo apt-get install git cmake build-essential libgl1-mesa-dev libsdl2-dev \
-libsdl2-image-dev libsdl2-ttf-dev libsdl2-gfx-dev libopenal-dev libboost-all-dev \
-libdirectfb-dev libst-dev mesa-utils xvfb x11vnc libsqlite3-dev
+sudo apt-get install git cmake build-essential libgl1-mesa-dev libsdl3-dev \
+libsdl3-image-dev libsdl3-ttf-dev libopenal-dev libboost-all-dev \
+libsqlite3-dev
 ```
+Note: the SDL3 apt packages only exist since Ubuntu 26.04 LTS.
 
 Run the following commands:
 ```bash
@@ -47,7 +48,7 @@ To install required dependencies you need [`brew`](https://brew.sh/) which can b
 
 ```bash
 # Install dependencies
-brew install git cmake sdl2 sdl2_image sdl2_ttf sdl2_gfx boost openal-soft
+brew install git cmake sdl3 sdl3_image sdl3_ttf boost openal-soft
 # Navigate to the directory where you want to put the repository
 cd ~
 # Clone the repository
@@ -90,7 +91,7 @@ git clone https://github.com/microsoft/vcpkg
 ```
 Install required dependencies (all triplets **must be `x86-windows`**):
 ```bat 
-.\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl2 sdl2-image[libjpeg-turbo] sdl2-ttf sdl2-gfx opengl openal-soft
+.\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl3 sdl3-image[jpeg,png] sdl3-ttf openal-soft sqlite3
 ```
 
 ```bat
@@ -101,8 +102,8 @@ cd C:\dev
 git clone https://github.com/vi3itor/GameplayFootball.git 
 cd GameplayFootball
 
-% Switch to windows branch
-git switch windows
+% Build from the main branch (the `windows` branch is obsolete)
+git switch main
 
 
 % Copy the contents of `data` directory into `build\Debug` or (and) `build\Release`
