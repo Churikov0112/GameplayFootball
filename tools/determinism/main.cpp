@@ -6,6 +6,11 @@
 // The runner intentionally exits via ::exit() after producing the result:
 // teardown of the GUI/rendering globals would crash in headless mode, and the
 // OS reclaims everything on exit anyway.
+//
+// Determinism note: EnvState serializes only the data of Vector3/Quaternion
+// (see src/utils/envstate.cpp) because those classes carry a vptr (virtual
+// destructor); memcpy of the whole object would capture the vtable address,
+// which is stable within one binary but changes between rebuilds.
 
 #ifdef WIN32
 #ifndef NOMINMAX
@@ -42,6 +47,12 @@ int main(int argc, char **argv) {
   Properties config;
   config.LoadFile("football.config");
   config.Set("graphics3d_renderer", "mock");  // headless: no window / GL context
+  // The in-game settings screen writes match_difficulty/match_duration back to
+  // football.config on exit, which would shift the simulation hash. Pin the
+  // simulation-affecting keys to the code defaults so the reference is stable
+  // regardless of the on-disk config state.
+  config.Set("match_difficulty", 0.8f);
+  config.Set("match_duration", 1.0f);
 
   Initialize(config);
   if (!InitGameContext(config)) ::exit(1);

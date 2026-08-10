@@ -589,13 +589,18 @@ void Player::_CalculateTacticalSituation() {
 
 void Player::ProcessState(EnvState *state) {
   ProcessStateBase(state);
-  state->process(dynamicFormationEntry);
+  state->process(dynamicFormationEntry.role);
+  state->process(dynamicFormationEntry.databasePosition);
+  state->process(dynamicFormationEntry.position);
   state->process(hasPossession);
   state->process(hasBestPossession);
   state->process(hasUniquePossession);
   state->process(possessionDuration_ms);
   state->process(triggerControlledBallCollision);
-  state->process(tacticalSituation);
+  state->process(tacticalSituation.forwardSpaceRating);
+  state->process(tacticalSituation.toGoalSpaceRating);
+  state->process(tacticalSituation.spaceRating);
+  state->process(tacticalSituation.forwardRating);
   state->process(desiredTimeToBall_ms);
   state->process(cards);
   state->process(cardEffectiveTime_ms);

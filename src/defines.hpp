@@ -44,9 +44,15 @@ namespace blunted {
 
   void randomize(unsigned int seed);
 
+  class Vector3;
+  class Quaternion;
+
 }
 // Raw-memory state serializer used for determinism snapshots (ported from GRF,
 // matching-fields only). Writes objects into a string via memcpy.
+// Vector3/Quaternion have virtual destructors (vptr), so their memcpy would
+// capture the vtable address, which is stable within one binary but changes
+// between rebuilds. They get dedicated overloads that serialize only the data.
 class EnvState {
  public:
   EnvState(const std::string &state, bool load) : state(state), load(load) { }
@@ -57,6 +63,9 @@ class EnvState {
     value.resize(s);
     for (char &c : value) process(c);
   }
+
+  void process(blunted::Vector3 &value);
+  void process(blunted::Quaternion &value);
 
   template<typename T> void process(std::vector<T>& collection) {
     int size = collection.size();

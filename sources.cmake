@@ -282,6 +282,7 @@ set(UTILS_HEADERS
         src/utils/threadhud.hpp
         src/utils/console.hpp
         src/utils/capturestate.hpp
+        src/utils/envstate.hpp
         )
 
 set(UTILS_EXT_HEADERS
@@ -302,6 +303,7 @@ set(UTILS_SOURCES
         src/utils/animationextensions/footballanimationextension.cpp
         src/utils/console.cpp
         src/utils/capturestate.cpp
+        src/utils/envstate.cpp
         )
 
 set(UTILS_GUI2_HEADERS
