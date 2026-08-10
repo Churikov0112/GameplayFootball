@@ -2,78 +2,14 @@ name: build
 
 on: [push, pull_request]
 
+# CI covers Windows x86 + x64. Both determinism references (reference.txt for x86,
+# reference-windows-x64.txt) are committed and confirmed by CI.
+#
+# Linux and macOS jobs are deferred: validated on local devices instead (the game
+# does not even run on macOS, and the linux runner options tried on GitHub Actions
+# are unstable — see docs/wiki/otkrytye-voprosy.md for the exact blockers and the
+# steps to re-enable both jobs).
 jobs:
-  # Linux: full build + determinism regression check against reference-linux.txt.
-  # SDL3 apt packages only exist since Ubuntu 26.04 LTS, but ubuntu-latest is still
-  # 24.04 and the ubuntu-26.04 preview runner (and a ubuntu:26.04 container job) prove
-  # unstable on GitHub Actions. Build SDL3/SDL_image/SDL_ttf from source on the stable
-  # ubuntu-24.04 runner instead.
-  linux:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake git pkg-config \
-            libboost-all-dev libopenal-dev libsqlite3-dev libgl1-mesa-dev \
-            libx11-dev libxext-dev libxrandr-dev libxkbcommon-dev libwayland-dev \
-            libpng-dev libjpeg-dev libfreetype-dev libharfbuzz-dev
-
-      - name: Build SDL3
-        run: |
-          git clone --depth 1 --branch release-3.4.x https://github.com/libsdl-org/SDL.git
-          cmake -S SDL -B SDL/build -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF
-          cmake --build SDL/build --parallel
-          sudo cmake --install SDL/build
-
-      - name: Build SDL_image
-        run: |
-          git clone --depth 1 --branch release-3.4.x https://github.com/libsdl-org/SDL_image.git
-          cmake -S SDL_image -B SDL_image/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build SDL_image/build --parallel
-          sudo cmake --install SDL_image/build
-
-      - name: Build SDL_ttf
-        run: |
-          git clone --depth 1 --branch release-3.2.x https://github.com/libsdl-org/SDL_ttf.git
-          cmake -S SDL_ttf -B SDL_ttf/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build SDL_ttf/build --parallel
-          sudo cmake --install SDL_ttf/build
-
-      - name: Configure
-        run: |
-          sudo ldconfig
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        run: cmake --build build --parallel
-
-      - name: Prepare data
-        run: cp -R data/. build/
-
-      - name: Determinism check
-        working-directory: build
-        run: |
-          HASH=$(./determinism_runner run | grep -E '^[0-9a-f]{40}$' | tail -1)
-          echo "determinism hash: $HASH"
-          REF=../tools/determinism/reference-linux.txt
-          if [ -f "$REF" ]; then
-            ./determinism_runner check "$(cat "$REF")"
-          else
-            echo "$HASH" > "$REF"
-            echo "reference-linux.txt did not exist; generated: $HASH"
-            echo "TODO: verify hash, see docs/wiki/otkrytye-voprosy.md"
-          fi
-
-      - name: Upload reference
-        uses: actions/upload-artifact@v4
-        with:
-          name: reference-linux.txt
-          path: tools/determinism/reference-linux.txt
-          if-no-files-found: ignore
-
   # Windows x86: build (Win32) + check against the committed reference.txt.
   windows-x86:
     runs-on: windows-latest
@@ -137,19 +73,3 @@ jobs:
         with:
           name: reference-windows-x64.txt
           path: tools/determinism/reference-windows-x64.txt
-
-  # macOS: build only. The game does not run on macOS (rendering must happen on
-  # the main thread, see docs/wiki/otkrytye-voprosy.md), so no determinism check.
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: brew install cmake sdl3 sdl3_image sdl3_ttf boost openal-soft
-
-      - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        run: cmake --build build --parallel

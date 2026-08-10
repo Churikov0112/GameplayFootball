@@ -82,3 +82,19 @@ macos сборка) и эталоны на платформу: x86 `reference.tx
 `reference-linux.txt` снимается первым CI-прогоном (TODO, Task 6). Linux-job привязан к `ubuntu-26.04`
 (apt-пакеты SDL3 есть только с 26.04; `ubuntu-latest` всё ещё 24.04). Обновлены вики, AGENTS.md,
 README. Первый прогон CI — после push (Task 6).
+
+## [2026-08-10] session | CI на GitHub Actions: Windows подтверждён, linux/macos отложены
+Ветка `build-modernization` запушена, workflow запущен. Windows x86+x64 подтверждены end-to-end:
+сборка на VS2026 + новый boost, determinism check/capture дают ровно локальные эталоны
+(x86 `372c4bbd...`, x64 `4e9ddb72...`) — оба портативны между MSVC 2022 и 2026. По пути починены
+три реальных бага: (1) дистрибутивный Boost (Ubuntu/Homebrew, b2) не ставит компонентные
+CMake-конфиги и в 1.90+ не собирает `libboost_system` (header-only с 1.69) — в CMakeLists
+`Boost_NO_BOOST_CMAKE=ON`, компоненты `thread filesystem`; (2) `MockAudioRenderer`
+(`audio_renderer=mock`, `src/systems/audio/rendering/mock_audiorenderer.hpp`) — на CI-раннерах нет
+аудио-устройства, `OpenALRenderer::CreateContext` падал фатально; (3) баг кавычек в PowerShell-шаге
+capture (`$refFile = ..\..\...` без кавычек → `$null`). Linux/macos в CI нестабильны:
+preview-раннер `ubuntu-26.04` гасится посреди сборки, контейнер `ubuntu:26.04` висит на teardown,
+сборка SDL3 из исходников упёрлась в нехватку `libasound2-dev`, macOS build-only висит часами.
+Linux/macos вынесены из CI, проверка переносится на локальные девайсы (см.
+`docs/wiki/открытые-вопросы.md`). `reference-linux.txt` — TODO (снять на Linux-устройстве).
+Малый boost-набор в vcpkg (component-порты) ускорил Windows-джобы с ~57 до ~10-15 мин.
