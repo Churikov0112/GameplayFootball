@@ -12,6 +12,7 @@
 #include "managers/resourcemanagerpool.hpp"
 
 #include "rendering/audio_messages.hpp"
+#include "rendering/mock_audiorenderer.hpp"
 
 namespace blunted {
 
@@ -29,6 +30,7 @@ namespace blunted {
 
     // start thread for renderer
     if (config.Get("audio_renderer", "openal") == "openal") rendererTask = new OpenALRenderer();
+    else rendererTask = new MockAudioRenderer();
     rendererTask->Run();
 
     boost::intrusive_ptr<AudioRendererMessage_CreateContext> createContext(new AudioRendererMessage_CreateContext());

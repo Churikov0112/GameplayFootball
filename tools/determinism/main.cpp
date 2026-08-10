@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
   Properties config;
   config.LoadFile("football.config");
   config.Set("graphics3d_renderer", "mock");  // headless: no window / GL context
+  config.Set("audio_renderer", "mock");       // headless: no audio device (CI runners have none)
   // The in-game settings screen writes match_difficulty/match_duration back to
   // football.config on exit, which would shift the simulation hash. Pin the
   // simulation-affecting keys to the code defaults so the reference is stable
