@@ -1,0 +1,124 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  # Linux: full build + determinism regression check against reference-linux.txt.
+  # Pinned to ubuntu-26.04: SDL3 apt packages (libsdl3-dev, libsdl3-image-dev,
+  # libsdl3-ttf-dev) only exist since Ubuntu 26.04 LTS; ubuntu-latest still maps
+  # to 24.04 (no SDL3 packages).
+  linux:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake \
+            libsdl3-dev libsdl3-image-dev libsdl3-ttf-dev \
+            libboost-all-dev libopenal-dev libsqlite3-dev libgl1-mesa-dev \
+            libx11-dev libxext-dev libxrandr-dev libxkbcommon-dev libwayland-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Prepare data
+        run: cp -R data/. build/
+
+      - name: Determinism check
+        working-directory: build
+        run: |
+          HASH=$(./determinism_runner run | grep -E '^[0-9a-f]{40}$' | tail -1)
+          echo "determinism hash: $HASH"
+          REF=../tools/determinism/reference-linux.txt
+          if [ -f "$REF" ]; then
+            ./determinism_runner check "$(cat "$REF")"
+          else
+            echo "$HASH" > "$REF"
+            echo "reference-linux.txt did not exist; generated: $HASH"
+            echo "TODO: verify hash, see docs/wiki/otkrytye-voprosy.md"
+          fi
+
+  # Windows x86: build (Win32) + check against the committed reference.txt.
+  windows-x86:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install vcpkg dependencies
+        run: vcpkg install sdl3 sdl3-image[jpeg,png] sdl3-ttf boost openal-soft sqlite3 --triplet x86-windows
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -B build -A Win32 -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Prepare data
+        run: xcopy /e /i data build\Release
+
+      - name: Determinism check
+        working-directory: build/Release
+        run: |
+          $expected = Get-Content ..\..\tools\determinism\reference.txt
+          .\determinism_runner.exe check $expected
+
+  # Windows x64: build (x64) + capture the determinism reference into
+  # reference-windows-x64.txt (run mode). The hash is platform/arch-specific,
+  # so it is recorded here on first run and then committed.
+  windows-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install vcpkg dependencies
+        run: vcpkg install sdl3 sdl3-image[jpeg,png] sdl3-ttf boost openal-soft sqlite3 --triplet x64-windows
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -B build -A x64 -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Prepare data
+        run: xcopy /e /i data build\Release
+
+      - name: Determinism reference capture
+        working-directory: build/Release
+        run: |
+          $hash = (.\determinism_runner.exe run | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -Last 1)
+          $refFile = ..\..\tools\determinism\reference-windows-x64.txt
+          if (Test-Path $refFile) {
+            $current = (Get-Content $refFile).Trim()
+            if ($current -ne $hash) { Write-Host "WARNING: hash differs from committed reference (committed=$current, got=$hash); reference updated, commit the new value." }
+          }
+          Set-Content -Path $refFile -Value $hash
+          Write-Host "windows-x64 determinism reference: $hash"
+
+      - name: Upload reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-windows-x64.txt
+          path: tools/determinism/reference-windows-x64.txt
+
+  # macOS: build only. The game does not run on macOS (rendering must happen on
+  # the main thread, see docs/wiki/otkrytye-voprosy.md), so no determinism check.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install cmake sdl3 sdl3_image sdl3_ttf boost openal-soft
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
