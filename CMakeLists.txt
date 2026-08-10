@@ -30,6 +30,11 @@ FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(SDL3 REQUIRED)
 FIND_PACKAGE(SDL3_image REQUIRED)
 FIND_PACKAGE(SDL3_ttf REQUIRED)
+# System/distro boost builds (Ubuntu libboost-all-dev, Homebrew) are done with b2,
+# which installs only the main BoostConfig.cmake and not the modular per-component
+# configs, so find_package(Boost COMPONENTS ...) fails against them. Force FindBoost's
+# manual search, which works with any boost layout.
+set(Boost_NO_BOOST_CMAKE ON)
 FIND_PACKAGE(Boost REQUIRED COMPONENTS system thread filesystem)
 FIND_PACKAGE(OpenAL REQUIRED)
 FIND_PACKAGE(SQLite3 REQUIRED)
