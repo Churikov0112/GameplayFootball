@@ -4,29 +4,48 @@ on: [push, pull_request]
 
 jobs:
   # Linux: full build + determinism regression check against reference-linux.txt.
-  # SDL3 apt packages (libsdl3-dev, libsdl3-image-dev, libsdl3-ttf-dev) only exist
-  # since Ubuntu 26.04 LTS. ubuntu-latest still maps to 24.04, and the ubuntu-26.04
-  # preview runner is unstable (VM gets shut down mid-build), so run on the stable
-  # ubuntu-24.04 runner inside an ubuntu:26.04 container.
+  # SDL3 apt packages only exist since Ubuntu 26.04 LTS, but ubuntu-latest is still
+  # 24.04 and the ubuntu-26.04 preview runner (and a ubuntu:26.04 container job) prove
+  # unstable on GitHub Actions. Build SDL3/SDL_image/SDL_ttf from source on the stable
+  # ubuntu-24.04 runner instead.
   linux:
     runs-on: ubuntu-24.04
-    container: ubuntu:26.04
     steps:
-      - name: Install git
-        run: apt-get update && apt-get install -y git ca-certificates
-
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y build-essential cmake \
-            libsdl3-dev libsdl3-image-dev libsdl3-ttf-dev \
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git pkg-config \
             libboost-all-dev libopenal-dev libsqlite3-dev libgl1-mesa-dev \
-            libx11-dev libxext-dev libxrandr-dev libxkbcommon-dev libwayland-dev
+            libx11-dev libxext-dev libxrandr-dev libxkbcommon-dev libwayland-dev \
+            libpng-dev libjpeg-dev libfreetype-dev libharfbuzz-dev
+
+      - name: Build SDL3
+        run: |
+          git clone --depth 1 --branch release-3.4.x https://github.com/libsdl-org/SDL.git
+          cmake -S SDL -B SDL/build -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF
+          cmake --build SDL/build --parallel
+          sudo cmake --install SDL/build
+
+      - name: Build SDL_image
+        run: |
+          git clone --depth 1 --branch release-3.4.x https://github.com/libsdl-org/SDL_image.git
+          cmake -S SDL_image -B SDL_image/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build SDL_image/build --parallel
+          sudo cmake --install SDL_image/build
+
+      - name: Build SDL_ttf
+        run: |
+          git clone --depth 1 --branch release-3.2.x https://github.com/libsdl-org/SDL_ttf.git
+          cmake -S SDL_ttf -B SDL_ttf/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build SDL_ttf/build --parallel
+          sudo cmake --install SDL_ttf/build
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: |
+          sudo ldconfig
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --parallel
