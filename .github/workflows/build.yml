@@ -4,18 +4,23 @@ on: [push, pull_request]
 
 jobs:
   # Linux: full build + determinism regression check against reference-linux.txt.
-  # Pinned to ubuntu-26.04: SDL3 apt packages (libsdl3-dev, libsdl3-image-dev,
-  # libsdl3-ttf-dev) only exist since Ubuntu 26.04 LTS; ubuntu-latest still maps
-  # to 24.04 (no SDL3 packages).
+  # SDL3 apt packages (libsdl3-dev, libsdl3-image-dev, libsdl3-ttf-dev) only exist
+  # since Ubuntu 26.04 LTS. ubuntu-latest still maps to 24.04, and the ubuntu-26.04
+  # preview runner is unstable (VM gets shut down mid-build), so run on the stable
+  # ubuntu-24.04 runner inside an ubuntu:26.04 container.
   linux:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04
     steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y git ca-certificates
+
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake \
+          apt-get update
+          apt-get install -y build-essential cmake \
             libsdl3-dev libsdl3-image-dev libsdl3-ttf-dev \
             libboost-all-dev libopenal-dev libsqlite3-dev libgl1-mesa-dev \
             libx11-dev libxext-dev libxrandr-dev libxkbcommon-dev libwayland-dev
