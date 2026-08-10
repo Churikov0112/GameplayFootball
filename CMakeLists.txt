@@ -24,95 +24,262 @@ if(UNIX)
    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-unused-variable -Wno-sign-compare -Wno-unused-function -Wno-strict-aliasing")
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O3")
 endif(UNIX)
-# SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS} -fPIC -g -O3")
-# SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -O3 -g")
 
 # Find required libraries
 FIND_PACKAGE(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIR})
-
 FIND_PACKAGE(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR})
-
 FIND_PACKAGE(SDL2_image REQUIRED)
-include_directories(${SDL2_IMAGE_DIRS})
-
 FIND_PACKAGE(SDL2_ttf REQUIRED)
-include_directories(${SDL2_TTF_DIRS})
-
 FIND_PACKAGE(SDL2_gfx REQUIRED)
-include_directories(${SDL2_GFX_DIRS})
-
 FIND_PACKAGE(Boost REQUIRED COMPONENTS system thread filesystem)
-include_directories(${Boost_INCLUDE_DIR})
-
 FIND_PACKAGE(OpenAL REQUIRED)
-include_directories(${OPENAL_INCLUDE_DIR})
-
 FIND_PACKAGE(SQLite3 REQUIRED)
-include_directories(${SQLite3_INCLUDE_DIRS})
 
-include_directories(${PROJECT_SOURCE_DIR}/src)
-
-# Include the sources
-include(sources.cmake)
-
-# Compile it as multiple static libraries (note: not compiling physics,
-# as not used by gameplayfootball)
-
-add_library(baselib OBJECT ${BASE_SOURCES} ${BASE_HEADERS}
-        ${BASE_GEOMETRY_HEADERS} ${BASE_MATH_HEADERS})
-add_library(systemscommonlib OBJECT ${SYSTEMS_COMMON_SOURCES}
-        ${SYSTEMS_COMMON_HEADERS})
-add_library(systemsgraphicslib OBJECT ${SYSTEMS_GRAPHICS_SOURCES}
-        ${SYSTEMS_GRAPHICS_HEADERS} ${SYSTEMS_GRAPHICS_OBJECTS_HEADERS}
-        ${SYSTEMS_GRAPHICS_RESOURCES_HEADERS} ${SYSTEMS_GRAPHICS_RENDERING_HEADERS})
-add_library(systemsaudiolib OBJECT ${SYSTEMS_AUDIO_SOURCES}
-        ${SYSTEMS_AUDIO_HEADERS} ${SYSTEMS_AUDIO_OBJECTS_HEADERS}
-        ${SYSTEMS_AUDIO_RESOURCES_HEADERS} ${SYSTEMS_AUDIO_RENDERING_HEADERS})
-add_library(loaderslib OBJECT ${LOADERS_SOURCES} ${LOADERS_HEADERS})
-add_library(typeslib OBJECT ${TYPES_SOURCES} ${TYPES_HEADERS})
-add_library(frameworklib OBJECT ${FRAMEWORK_SOURCES} ${FRAMEWORK_HEADERS})
-add_library(scenelib OBJECT ${SCENE_SOURCES} ${SCENE_HEADERS}
-        ${SCENE2D_HEADERS} ${SCENE3D_HEADERS} ${SCENE_OBJECTS_HEADERS}
-        ${SCENE_RESOURCES_HEADERS})
-add_library(managerslib OBJECT ${MANAGERS_SOURCES} ${MANAGERS_HEADERS})
-add_library(utilslib OBJECT ${UTILS_SOURCES} ${UTILS_HEADERS}
-        ${UTILS_EXT_HEADERS})
-add_library(gui2lib OBJECT ${UTILS_GUI2_SOURCES} ${UTILS_GUI2_HEADERS}
-        ${UTILS_GUI2_WIDGETS_HEADERS})
-
-set(OWN_LIBRARIES $<TARGET_OBJECTS:baselib> $<TARGET_OBJECTS:systemscommonlib>
-        $<TARGET_OBJECTS:systemsgraphicslib>
-        $<TARGET_OBJECTS:systemsaudiolib> $<TARGET_OBJECTS:loaderslib>
-        $<TARGET_OBJECTS:typeslib> $<TARGET_OBJECTS:frameworklib>
-        $<TARGET_OBJECTS:scenelib> $<TARGET_OBJECTS:managerslib>
-        $<TARGET_OBJECTS:utilslib> $<TARGET_OBJECTS:gui2lib>)
-
-# Join all created static libraries into the single static one.
-add_library(blunted2 ${BLUNTED_CORE_SOURCES} ${BLUNTED_CORE_HEADERS} ${OWN_LIBRARIES})
-
-add_library(leaguelib ${LEAGUE_SOURCES} ${LEAGUE_HEADERS})
-add_library(gamelib ${GAME_SOURCES} ${GAME_HEADERS})
-add_library(hidlib ${HID_SOURCES} ${HID_HEADERS})
-add_library(menulib ${MENU_SOURCES} ${MENU_HEADERS})
-add_library(datalib ${DATA_SOURCES} ${DATA_HEADERS})
-add_library(gamecontextlib ${GAMECONTEXT_SOURCES} ${GAMECONTEXT_HEADERS})
-
-set(LIBRARIES gamelib hidlib menulib datalib leaguelib gamecontextlib blunted2
-   Boost::filesystem Boost::system Boost::thread SQLite::SQLite3
-   ${SDL2_IMAGE_LIBRARIES} ${SDL2_TTF_LIBRARIES} ${SDL2_GFX_LIBRARIES}
-   ${SDL2_LIBRARIES} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
+# Blunted2 engine core: a single static library built from the former
+# object libraries (base, systems, loaders, types, framework, scene,
+# managers, utils, gui2). Note: physics is intentionally NOT compiled,
+# as it is not used by gameplayfootball.
+add_library(blunted2 STATIC
+        src/base/log.cpp
+        src/base/sdl_surface.cpp
+        src/base/utils.cpp
+        src/base/properties.cpp
+        src/base/exception.cpp
+        src/base/geometry/triangle.cpp
+        src/base/geometry/line.cpp
+        src/base/geometry/trianglemeshutils.cpp
+        src/base/geometry/aabb.cpp
+        src/base/geometry/plane.cpp
+        src/base/math/vector3.cpp
+        src/base/math/matrix3.cpp
+        src/base/math/bluntmath.cpp
+        src/base/math/quaternion.cpp
+        src/base/math/matrix4.cpp
+        src/systems/isystemtask.cpp
+        src/systems/graphics/graphics_object.cpp
+        src/systems/graphics/graphics_task.cpp
+        src/systems/graphics/objects/graphics_geometry.cpp
+        src/systems/graphics/objects/graphics_camera.cpp
+        src/systems/graphics/objects/graphics_light.cpp
+        src/systems/graphics/objects/graphics_overlay2d.cpp
+        src/systems/graphics/graphics_scene.cpp
+        src/systems/graphics/resources/vertexbuffer.cpp
+        src/systems/graphics/resources/texture.cpp
+        src/systems/graphics/rendering/r3d_messages.cpp
+        src/systems/graphics/rendering/opengl_renderer3d.cpp
+        src/systems/graphics/graphics_system.cpp
+        src/systems/audio/audio_system.cpp
+        src/systems/audio/audio_scene.cpp
+        src/systems/audio/objects/audio_audioreceiver.cpp
+        src/systems/audio/objects/audio_sound.cpp
+        src/systems/audio/resources/audio_soundbuffer.cpp
+        src/systems/audio/rendering/openal_renderer.cpp
+        src/systems/audio/rendering/audio_messages.cpp
+        src/systems/audio/audio_object.cpp
+        src/loaders/imageloader.cpp
+        src/loaders/aseloader.cpp
+        src/loaders/wavloader.cpp
+        src/types/iusertask.cpp
+        src/types/spatial.cpp
+        src/types/refcounted.cpp
+        src/types/trianglemesh.cpp
+        src/types/observer.cpp
+        src/types/command.cpp
+        src/framework/workerthread.cpp
+        src/framework/tasksequence.cpp
+        src/framework/scheduler.cpp
+        src/scene/objectfactory.cpp
+        src/scene/scene2d/scene2d.cpp
+        src/scene/scene.cpp
+        src/scene/objects/image2d.cpp
+        src/scene/objects/sound.cpp
+        src/scene/objects/light.cpp
+        src/scene/objects/audioreceiver.cpp
+        src/scene/objects/geometry.cpp
+        src/scene/objects/skybox.cpp
+        src/scene/objects/joint.cpp
+        src/scene/objects/camera.cpp
+        src/scene/scene3d/scene3d.cpp
+        src/scene/scene3d/node.cpp
+        src/scene/object.cpp
+        src/scene/resources/surface.cpp
+        src/scene/resources/soundbuffer.cpp
+        src/scene/resources/geometrydata.cpp
+        src/managers/taskmanager.cpp
+        src/managers/scenemanager.cpp
+        src/managers/resourcemanagerpool.cpp
+        src/managers/usereventmanager.cpp
+        src/managers/environmentmanager.cpp
+        src/managers/systemmanager.cpp
+        src/utils/database.cpp
+        src/utils/text2d.cpp
+        src/utils/orbitcamera.cpp
+        src/utils/animation.cpp
+        src/utils/splitgeometry.cpp
+        src/utils/objectloader.cpp
+        src/utils/directoryparser.cpp
+        src/utils/threadhud.cpp
+        src/utils/xmlloader.cpp
+        src/utils/animationextensions/footballanimationextension.cpp
+        src/utils/console.cpp
+        src/utils/capturestate.cpp
+        src/utils/envstate.cpp
+        src/utils/gui2/style.cpp
+        src/utils/gui2/widgets/caption.cpp
+        src/utils/gui2/widgets/menu.cpp
+        src/utils/gui2/widgets/editline.cpp
+        src/utils/gui2/widgets/button.cpp
+        src/utils/gui2/widgets/image.cpp
+        src/utils/gui2/widgets/grid.cpp
+        src/utils/gui2/widgets/root.cpp
+        src/utils/gui2/widgets/iconselector.cpp
+        src/utils/gui2/widgets/frame.cpp
+        src/utils/gui2/widgets/filebrowser.cpp
+        src/utils/gui2/widgets/scrollbar.cpp
+        src/utils/gui2/widgets/capturekey.cpp
+        src/utils/gui2/widgets/text.cpp
+        src/utils/gui2/widgets/slider.cpp
+        src/utils/gui2/widgets/dialog.cpp
+        src/utils/gui2/widgets/pulldown.cpp
+        src/utils/gui2/events.cpp
+        src/utils/gui2/view.cpp
+        src/utils/gui2/windowmanager.cpp
+        src/utils/gui2/guitask.cpp
+        src/utils/gui2/page.cpp
+        src/blunted.cpp)
+target_include_directories(blunted2 PUBLIC
+        ${PROJECT_SOURCE_DIR}/src
+        ${OPENGL_INCLUDE_DIR}
+        ${SDL2_INCLUDE_DIR}
+        ${SDL2_IMAGE_DIRS}
+        ${SDL2_TTF_DIRS}
+        ${SDL2_GFX_DIRS}
+        ${Boost_INCLUDE_DIR}
+        ${OPENAL_INCLUDE_DIR}
+        ${SQLite3_INCLUDE_DIRS})
+target_link_libraries(blunted2 PUBLIC
+        Boost::filesystem Boost::system Boost::thread SQLite::SQLite3
+        ${SDL2_IMAGE_LIBRARIES} ${SDL2_TTF_LIBRARIES} ${SDL2_GFX_LIBRARIES}
+        ${SDL2_LIBRARIES} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 if(UNIX)
-   set(LIBRARIES ${LIBRARIES} dl m)
+   target_link_libraries(blunted2 PUBLIC dl m)
 endif(UNIX)
 
-add_executable(gameplayfootball WIN32 ${CORE_SOURCES} ${CORE_HEADERS})
-target_link_libraries(gameplayfootball ${LIBRARIES})
+# Game-side libraries. Each compiles headers that pull in engine/core
+# includes, so give every target the same include path set.
+set(ALL_INCLUDE_DIRS
+        ${PROJECT_SOURCE_DIR}/src
+        ${OPENGL_INCLUDE_DIR}
+        ${SDL2_INCLUDE_DIR}
+        ${SDL2_IMAGE_DIRS}
+        ${SDL2_TTF_DIRS}
+        ${SDL2_GFX_DIRS}
+        ${Boost_INCLUDE_DIR}
+        ${OPENAL_INCLUDE_DIR}
+        ${SQLite3_INCLUDE_DIRS})
+
+function(apply_common_includes target)
+  target_include_directories(${target} PRIVATE ${ALL_INCLUDE_DIRS})
+endfunction()
+
+add_library(leaguelib STATIC src/league/leaguecode.cpp)
+apply_common_includes(leaguelib)
+add_library(gamelib STATIC
+        src/onthepitch/officials.cpp
+        src/onthepitch/player/humanoid/humanoid_utils.cpp
+        src/onthepitch/player/humanoid/animcollection.cpp
+        src/onthepitch/player/humanoid/humanoidbase.cpp
+        src/onthepitch/player/humanoid/humanoid.cpp
+        src/onthepitch/player/playerofficial.cpp
+        src/onthepitch/player/player.cpp
+        src/onthepitch/player/playerbase.cpp
+        src/onthepitch/player/controller/playercontroller.cpp
+        src/onthepitch/player/controller/humancontroller.cpp
+        src/onthepitch/player/controller/icontroller.cpp
+        src/onthepitch/player/controller/refereecontroller.cpp
+        src/onthepitch/player/controller/elizacontroller.cpp
+        src/onthepitch/player/controller/strategies/special/celebration.cpp
+        src/onthepitch/player/controller/strategies/strategy.cpp
+        src/onthepitch/player/controller/strategies/offtheball/default_mid.cpp
+        src/onthepitch/player/controller/strategies/offtheball/default_off.cpp
+        src/onthepitch/player/controller/strategies/offtheball/default_def.cpp
+        src/onthepitch/player/controller/strategies/offtheball/goalie_default.cpp
+        src/onthepitch/humangamer.cpp
+        src/onthepitch/ball.cpp
+        src/onthepitch/match.cpp
+        src/onthepitch/referee.cpp
+        src/onthepitch/AIsupport/mentalimage.cpp
+        src/onthepitch/AIsupport/AIfunctions.cpp
+        src/onthepitch/proceduralpitch.cpp
+        src/onthepitch/team.cpp
+        src/onthepitch/teamAIcontroller.cpp)
+apply_common_includes(gamelib)
+add_library(hidlib STATIC src/hid/gamepad.cpp src/hid/keyboard.cpp)
+apply_common_includes(hidlib)
+add_library(menulib STATIC
+        src/menu/credits.cpp
+        src/menu/league/league_system.cpp
+        src/menu/league/league_team.cpp
+        src/menu/league/league_management.cpp
+        src/menu/league/league.cpp
+        src/menu/league/league_calendar.cpp
+        src/menu/league/league_inbox.cpp
+        src/menu/league/league_forward.cpp
+        src/menu/league/league_standings.cpp
+        src/menu/gameplan.cpp
+        src/menu/widgets/planmap.cpp
+        src/menu/widgets/gameplansubmenu.cpp
+        src/menu/startmatch/teamselect.cpp
+        src/menu/startmatch/loadingmatch.cpp
+        src/menu/startmatch/matchoptions.cpp
+        src/menu/visualoptions.cpp
+        src/menu/pagefactory.cpp
+        src/menu/menutask.cpp
+        src/menu/cameramenu.cpp
+        src/menu/menuscene.cpp
+        src/menu/controllerselect.cpp
+        src/menu/mainmenu.cpp
+        src/menu/ingame/radar.cpp
+        src/menu/ingame/tacticsdebug.cpp
+        src/menu/ingame/gamepage.cpp
+        src/menu/ingame/replaymenu.cpp
+        src/menu/ingame/gameover.cpp
+        src/menu/ingame/phasemenu.cpp
+        src/menu/ingame/ingame.cpp
+        src/menu/ingame/scoreboard.cpp
+        src/menu/ingame/playerhud.cpp
+        src/menu/settings.cpp)
+apply_common_includes(menulib)
+add_library(datalib STATIC
+        src/data/matchdata.cpp
+        src/data/playerdata.cpp
+        src/data/teamdata.cpp)
+apply_common_includes(datalib)
+add_library(gamecontextlib STATIC src/gamecontext.cpp)
+apply_common_includes(gamecontextlib)
+
+set(LIBRARIES gamelib hidlib menulib datalib leaguelib gamecontextlib blunted2)
+
+add_executable(gameplayfootball WIN32
+        src/misc/perlin.cpp
+        src/misc/hungarian.c
+        src/gametask.cpp
+        src/utils.cpp
+        src/main.cpp
+        src/dbquery.cpp
+        src/gamedefines.cpp)
+apply_common_includes(gameplayfootball)
+target_link_libraries(gameplayfootball PRIVATE ${LIBRARIES})
 
 # determinism_runner needs the core sources (utils, gamedefines, gametask, dbquery, misc)
 # but NOT main.cpp (which would conflict with its own main()).
-list(REMOVE_ITEM CORE_SOURCES src/main.cpp)
-list(REMOVE_ITEM CORE_HEADERS src/main.hpp)
-add_executable(determinism_runner tools/determinism/main.cpp ${CORE_SOURCES} ${CORE_HEADERS})
-target_link_libraries(determinism_runner ${LIBRARIES})
+add_executable(determinism_runner
+        tools/determinism/main.cpp
+        src/misc/perlin.cpp
+        src/misc/hungarian.c
+        src/gametask.cpp
+        src/utils.cpp
+        src/dbquery.cpp
+        src/gamedefines.cpp)
+apply_common_includes(determinism_runner)
+target_link_libraries(determinism_runner PRIVATE ${LIBRARIES})
