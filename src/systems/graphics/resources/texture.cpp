@@ -70,7 +70,7 @@ namespace blunted {
     assert(renderer3D);
     assert(textureID != -1);
 
-    bool _alpha = SDL_ISPIXELFORMAT_ALPHA(image->format->format);
+    bool _alpha = SDL_ISPIXELFORMAT_ALPHA(image->format);
     boost::intrusive_ptr<Renderer3DMessage_ResizeTexture> resizeTexture(new Renderer3DMessage_ResizeTexture(textureID, image, internalPixelFormat, pixelFormat, _alpha, mipmaps));
     renderer3D->messageQueue.PushMessage(resizeTexture);
     //resizeTexture->Wait();
@@ -80,7 +80,7 @@ namespace blunted {
     assert(renderer3D);
     assert(textureID != -1);
 
-    bool _alpha = SDL_ISPIXELFORMAT_ALPHA(image->format->format);
+    bool _alpha = SDL_ISPIXELFORMAT_ALPHA(image->format);
     boost::intrusive_ptr<Renderer3DMessage_UpdateTexture> updateTexture(new Renderer3DMessage_UpdateTexture(textureID, image, _alpha, mipmaps));
     renderer3D->messageQueue.PushMessage(updateTexture);
     //updateTexture->Wait();

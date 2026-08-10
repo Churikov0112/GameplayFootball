@@ -118,7 +118,7 @@ Uint32 GetPitchDiffuseColor(SDL_Surface *pitchSurf, float xCoord, float yCoord) 
   g = clamp(g * (1.0 - overlay_alpha) + overlay.coords[1] * overlay_alpha, 0, 255);
   b = clamp(b * (1.0 - overlay_alpha) + overlay.coords[2] * overlay_alpha, 0, 255);
 
-  Uint32 color = SDL_MapRGB(pitchSurf->format, r, g, b);
+  Uint32 color = SDL_MapSurfaceRGB(pitchSurf, r, g, b);
   return color;
 }
 
@@ -136,7 +136,7 @@ inline Uint32 GetPitchSpecularColor(SDL_Surface *pitchSurf, float xCoord, float 
   perlY = clamp(perlY + randomY * randomSpread, 0, perlinTexH - 1);
   float noise = base + BilinearSample(perlinTex, perlX, perlY, perlinTexW, perlinTexH) * noisefac;
 
-  Uint32 color = SDL_MapRGB(pitchSurf->format, noise, noise, noise);
+  Uint32 color = SDL_MapSurfaceRGB(pitchSurf, noise, noise, noise);
   return color;
 }
 
@@ -184,7 +184,7 @@ Uint32 GetPitchNormalColor(SDL_Surface *pitchSurf, float xCoord, float yCoord, f
   normal.coords[1] = normal.coords[1] * 0.5f + 0.5f;
   normal.coords[2] = normal.coords[2] * 0.5f + 0.5f;
 
-  Uint32 color = SDL_MapRGB(pitchSurf->format, normal.coords[0] * 255, normal.coords[1] * 255, normal.coords[2] * 255);
+  Uint32 color = SDL_MapSurfaceRGB(pitchSurf, normal.coords[0] * 255, normal.coords[1] * 255, normal.coords[2] * 255);
   return color;
 }
 
@@ -201,7 +201,7 @@ void ConvertCoord(int resX, int resY, float x1, float y1, signed int offsetW, si
   if (offsetH == -1) y = resY - y - 1;
 }
 
-void BmpRect(SDL_PixelFormat *pixelFormat, Uint32 *bitmap, int resX, int resY, float x1, float y1, float x2, float y2, signed int offsetW, signed int offsetH) {
+void BmpRect(SDL_PixelFormatDetails *pixelFormat, Uint32 *bitmap, int resX, int resY, float x1, float y1, float x2, float y2, signed int offsetW, signed int offsetH) {
   float rx1, ry1;
   ConvertCoord(resX, resY, x1, y1, offsetW, offsetH, rx1, ry1);
   float rx2, ry2;
@@ -213,17 +213,17 @@ void BmpRect(SDL_PixelFormat *pixelFormat, Uint32 *bitmap, int resX, int resY, f
   for (int xi = int(ceil(rx1)); xi <= int(floor(rx2)); xi++) {
     for (int yi = int(ceil(ry1)); yi <= int(floor(ry2)); yi++) {
       Uint8 r, g, b;
-      SDL_GetRGB(bitmap[yi * resX + xi], pixelFormat, &r, &g, &b);
+      SDL_GetRGB(bitmap[yi * resX + xi], pixelFormat, NULL, &r, &g, &b);
       r = r * 0.5 + 100;
       g = g * 0.5 + 100;
       b = b * 0.5 + 100;
-      Uint32 lineColor = SDL_MapRGB(pixelFormat, r, g, b);
+      Uint32 lineColor = SDL_MapRGB(pixelFormat, NULL, r, g, b);
       bitmap[yi * resX + xi] = lineColor;
     }
   }
 }
 
-void BmpArc(SDL_PixelFormat *pixelFormat, Uint32 *bitmap, int resX, int resY, float x1, float y1, float radius, radian begin, radian end, signed int offsetW, signed int offsetH) {
+void BmpArc(SDL_PixelFormatDetails *pixelFormat, Uint32 *bitmap, int resX, int resY, float x1, float y1, float radius, radian begin, radian end, signed int offsetW, signed int offsetH) {
 
   int steps = resX * 0.03 * radius; // hackish approximation ;)
   radian step = fabs(end - begin) / (float)steps;
@@ -240,18 +240,18 @@ void BmpArc(SDL_PixelFormat *pixelFormat, Uint32 *bitmap, int resX, int resY, fl
     ry = int(round(ryf));
     if (rx >= 0 && rx < resX && ry >= 0 && ry < resY) {
       Uint8 r, g, b;
-      SDL_GetRGB(bitmap[ry * resX + rx], pixelFormat, &r, &g, &b);
+      SDL_GetRGB(bitmap[ry * resX + rx], pixelFormat, NULL, &r, &g, &b);
       r = r * 0.5 + 100;
       g = g * 0.5 + 100;
       b = b * 0.5 + 100;
-      Uint32 color = SDL_MapRGB(pixelFormat, r, g, b);
+      Uint32 color = SDL_MapRGB(pixelFormat, NULL, r, g, b);
       bitmap[ry * resX + rx] = color;
     }
     currentRad += step;
   }
 }
 
-void DrawLines(SDL_PixelFormat *pixelFormat, Uint32 *diffuseBitmap, int resX, int resY, signed int offsetW, signed int offsetH) {
+void DrawLines(SDL_PixelFormatDetails *pixelFormat, Uint32 *diffuseBitmap, int resX, int resY, signed int offsetW, signed int offsetH) {
 
   // only draw lowerright section, other sections are mirrored through offsetW and offsetH
 
@@ -363,21 +363,21 @@ void CreateChunk(int i, int resX, int resY, int resSpecularX, int resSpecularY, 
   pitchDiffuseTex->GetResource()->CreateTexture(e_InternalPixelFormat_SRGB8, e_PixelFormat_RGB, resX, resY, false, true, true, true);
   pitchDiffuseTex->GetResource()->UpdateTexture(pitchDiffuseSurf, false, true);
   pitchDiffuseTex->resourceMutex.unlock();
-  SDL_FreeSurface(pitchDiffuseSurf);
+  SDL_DestroySurface(pitchDiffuseSurf);
 
   pitchSpecularTex->resourceMutex.lock();
   pitchSpecularTex->GetResource()->DeleteTexture();
   pitchSpecularTex->GetResource()->CreateTexture(e_InternalPixelFormat_RGB8, e_PixelFormat_RGB, resSpecularX, resSpecularY, false, true, true, true);
   pitchSpecularTex->GetResource()->UpdateTexture(pitchSpecularSurf, false, true);
   pitchSpecularTex->resourceMutex.unlock();
-  SDL_FreeSurface(pitchSpecularSurf);
+  SDL_DestroySurface(pitchSpecularSurf);
 
   pitchNormalTex->resourceMutex.lock();
   pitchNormalTex->GetResource()->DeleteTexture();
   pitchNormalTex->GetResource()->CreateTexture(e_InternalPixelFormat_RGB8, e_PixelFormat_RGB, resNormalX, resNormalY, false, true, true, true);
   pitchNormalTex->GetResource()->UpdateTexture(pitchNormalSurf, false, true);
   pitchNormalTex->resourceMutex.unlock();
-  SDL_FreeSurface(pitchNormalSurf);
+  SDL_DestroySurface(pitchNormalSurf);
 
   if (Verbose()) printf("3\n");
 
@@ -386,7 +386,7 @@ void CreateChunk(int i, int resX, int resY, int resSpecularX, int resSpecularY, 
 void GeneratePitch(int resX, int resY, int resSpecularX, int resSpecularY, int resNormalX, int resNormalY) {
 
   SDL_Surface *seamless = IMG_Load("media/textures/pitch/seamlessgrass08.png");
-  SDL_PixelFormat seamlessFormat = *seamless->format;
+  SDL_PixelFormatDetails *seamlessFormat = (SDL_PixelFormatDetails *)SDL_GetPixelFormatDetails(seamless->format);
   seamlessTexW = seamless->w;
   seamlessTexH = seamless->h;
   seamlessTex = new Vector3[seamlessTexW * seamlessTexH];
@@ -394,14 +394,14 @@ void GeneratePitch(int resX, int resY, int resSpecularX, int resSpecularY, int r
     for (int y = 0; y < seamlessTexH; y++) {
       Uint32 pixel = sdl_getpixel(seamless, x, y);
       Uint8 r, g, b;
-      SDL_GetRGB(pixel, &seamlessFormat, &r, &g, &b);
+      SDL_GetRGB(pixel, seamlessFormat, NULL, &r, &g, &b);
       seamlessTex[y * seamless->w + x] = Vector3(r, g, b);
     }
   }
-  SDL_FreeSurface(seamless);
+  SDL_DestroySurface(seamless);
 
   SDL_Surface *overlay = IMG_Load("media/textures/pitch/overlay.png");
-  SDL_PixelFormat overlayFormat = *overlay->format;
+  SDL_PixelFormatDetails *overlayFormat = (SDL_PixelFormatDetails *)SDL_GetPixelFormatDetails(overlay->format);
   overlayTexW = overlay->w;
   overlayTexH = overlay->h;
   overlayTex = new Vector3[overlayTexW * overlayTexH];
@@ -410,13 +410,13 @@ void GeneratePitch(int resX, int resY, int resSpecularX, int resSpecularY, int r
     for (int y = 0; y < overlayTexH; y++) {
       Uint32 pixel = sdl_getpixel(overlay, x, y);
       Uint8 r, g, b, a;
-      SDL_GetRGBA(pixel, &overlayFormat, &r, &g, &b, &a);
+      SDL_GetRGBA(pixel, overlayFormat, NULL, &r, &g, &b, &a);
       overlayTex[y * overlay->w + x] = Vector3(r, g, b);
       overlay_alphaTex[y * overlay->w + x] = a / 256.0f;
       //printf("alpha: %f\n", overlay_alphaTex[y * overlay->w + x]);
     }
   }
-  SDL_FreeSurface(overlay);
+  SDL_DestroySurface(overlay);
 
   float scale = 0.06f;
 

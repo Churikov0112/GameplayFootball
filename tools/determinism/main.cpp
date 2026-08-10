@@ -28,7 +28,7 @@
 #include "onthepitch/match.hpp"
 #include "utils/capturestate.hpp"
 
-#include "SDL2/SDL_ttf.h"
+#include "SDL3_ttf/SDL_ttf.h"
 
 #include <string>
 #include <iostream>

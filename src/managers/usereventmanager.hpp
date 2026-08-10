@@ -24,7 +24,7 @@
 
 #include "base/math/vector3.hpp"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <map>
 
 namespace blunted {
@@ -58,7 +58,11 @@ namespace blunted {
       bool GetMouseButtonState(int sdlButtonID) const;
       Vector3 GetMouseRelativePos() const;
 
-      int GetJoystickCount() { return SDL_NumJoysticks(); }
+      int GetJoystickCount() {
+        int count = 0;
+        SDL_GetJoysticks(&count);
+        return count;
+      }
       bool GetJoyButtonState(int joyID, int sdlJoyButtonID) const;
       void SetJoyButtonState(int joyID, int sdlJoyButtonID, bool newState);
 

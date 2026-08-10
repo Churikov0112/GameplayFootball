@@ -57,7 +57,7 @@ namespace blunted {
       Renderer3D *renderer3D = caller->GetGraphicsScene()->GetGraphicsSystem()->GetRenderer3D();
 
       caller->texture->GetResource()->SetRenderer3D(renderer3D);
-    bool alpha = SDL_ISPIXELFORMAT_ALPHA((image->format->format));
+    bool alpha = SDL_ISPIXELFORMAT_ALPHA(image->format);
     caller->texture->GetResource()->CreateTexture(
         e_InternalPixelFormat_RGBA8,
         alpha ? e_PixelFormat_RGBA : e_PixelFormat_RGB, image->w, image->h,
@@ -86,7 +86,7 @@ namespace blunted {
     SDL_Surface *image = surface->GetResource()->GetData();
     assert(image);
     assert(caller->texture);
-    bool alpha = SDL_ISPIXELFORMAT_ALPHA((image->format->format));
+    bool alpha = SDL_ISPIXELFORMAT_ALPHA(image->format);
     if (caller->size[0] != image->w || caller->size[1] != image->h) {
       // surface was resized
       caller->size[0] = image->w;

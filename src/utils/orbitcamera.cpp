@@ -66,10 +66,10 @@ namespace blunted {
 
     // OrbitCamera
 
-    bool left = UserEventManager::GetInstance().GetKeyboardState(SDLK_a);
-    bool right = UserEventManager::GetInstance().GetKeyboardState(SDLK_d);
-    bool up = UserEventManager::GetInstance().GetKeyboardState(SDLK_w);
-    bool down = UserEventManager::GetInstance().GetKeyboardState(SDLK_s);
+    bool left = UserEventManager::GetInstance().GetKeyboardState(SDLK_A);
+    bool right = UserEventManager::GetInstance().GetKeyboardState(SDLK_D);
+    bool up = UserEventManager::GetInstance().GetKeyboardState(SDLK_W);
+    bool down = UserEventManager::GetInstance().GetKeyboardState(SDLK_S);
 
     Vector3 mouse = UserEventManager::GetInstance().GetMouseRelativePos();
 

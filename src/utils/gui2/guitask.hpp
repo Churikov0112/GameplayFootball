@@ -18,7 +18,7 @@
 #ifndef _HPP_GUI2_GUI2TASK
 #define _HPP_GUI2_GUI2TASK
 
-#include <SDL2/SDL_ttf.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include "types/iusertask.hpp"
 

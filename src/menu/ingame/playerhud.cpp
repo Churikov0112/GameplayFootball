@@ -6,7 +6,7 @@
 
 #include "utils/gui2/windowmanager.hpp"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #include "../../onthepitch/match.hpp"
 

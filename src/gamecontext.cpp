@@ -26,7 +26,7 @@
 #include "hid/keyboard.hpp"
 #include "hid/gamepad.hpp"
 
-#include "SDL2/SDL.h"
+#include "SDL3/SDL.h"
 
 using namespace blunted;
 
@@ -253,7 +253,9 @@ bool InitGameContext(Properties &cfg) {
 
   HIDKeyboard *keyboard = new HIDKeyboard();
   controllers.push_back(keyboard);
-  for (int i = 0; i < SDL_NumJoysticks(); i++) {
+  int joystickCount = 0;
+  SDL_GetJoysticks(&joystickCount);
+  for (int i = 0; i < joystickCount; i++) {
     HIDGamepad *gamepad = new HIDGamepad(i);
     controllers.push_back(gamepad);
   }

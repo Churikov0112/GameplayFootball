@@ -12,7 +12,7 @@
 #include "base/math/vector3.hpp"
 #include "base/geometry/line.hpp"
 
-#include <SDL2/SDL_ttf.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 namespace blunted {
 

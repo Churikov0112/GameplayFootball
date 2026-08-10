@@ -5,10 +5,8 @@
 #ifndef _hpp_sdl_surface
 #define _hpp_sdl_surface
 
-#include "SDL2/SDL_image.h"
-#include "SDL2/SDL_endian.h"
-
-#include "SDL2/SDL2_gfxPrimitives.h"
+#include "SDL3_image/SDL_image.h"
+#include "SDL3/SDL_endian.h"
 
 namespace blunted {
 

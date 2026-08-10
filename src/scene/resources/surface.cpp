@@ -6,8 +6,6 @@
 
 #include "base/log.hpp"
 
-#include "SDL2/SDL2_rotozoom.h"
-
 namespace blunted {
 
   Surface::Surface() : surface(0) {
@@ -17,13 +15,13 @@ namespace blunted {
   Surface::~Surface() {
     //printf("ANNIHILATING SURFACE.. ");
     if (surface) {
-      SDL_FreeSurface(surface);
+      SDL_DestroySurface(surface);
       surface = 0;
     }
   }
 
   Surface::Surface(const Surface &src) {
-    this->surface = SDL_ConvertSurface(src.surface, src.surface->format, 0);
+    this->surface = SDL_ConvertSurfaceAndColorspace(src.surface, src.surface->format, NULL, SDL_COLORSPACE_SRGB, 0);
     assert(this->surface);
   }
 
@@ -32,16 +30,11 @@ namespace blunted {
   }
 
   void Surface::SetData(SDL_Surface *surface) {
-    if (this->surface) SDL_FreeSurface(this->surface);
+    if (this->surface) SDL_DestroySurface(this->surface);
     this->surface = surface;
   }
 
   void Surface::Resize(int x, int y) {
-
-    // zoomSurface doesn't seem to create a completely new surface; got some weird segfaults.
-    // not 100% sure if it's their fault though, or if i'm doing something wrong. either way,
-    // it works with this fix, though it's a bit of a performance hit, an extra surface copy.
-    bool buggyZoomSurface = true;
 
     assert(this->surface);
     int xcur = this->surface->w;
@@ -52,17 +45,9 @@ namespace blunted {
     if (yfac == 0) yfac = xfac;
     if (xfac == 0) xfac = yfac;
     if (xfac == 0 || yfac == 0) return;
-    SDL_Surface *newSurf = zoomSurface(this->surface, xfac, yfac, SMOOTHING_ON);
-    //printf("resize factors: %f %f\n", xfac, yfac);
-    //printf("surface size: %i %i\n", this->surface->w, this->surface->h);
-    //printf("new surface size: %i %i\n", newSurf->w, newSurf->h);
-    SDL_FreeSurface(this->surface);
-    if (buggyZoomSurface) {
-      this->surface = SDL_ConvertSurface(newSurf, newSurf->format, 0);
-      SDL_FreeSurface(newSurf);
-    } else {
-      this->surface = newSurf;
-    }
+    SDL_Surface *newSurf = SDL_ScaleSurface(this->surface, int(xcur * xfac), int(ycur * yfac), SDL_SCALEMODE_LINEAR);
+    SDL_DestroySurface(this->surface);
+    this->surface = newSurf;
   }
 
   void Surface::GetSize(int &x, int &y) {

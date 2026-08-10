@@ -110,8 +110,8 @@ namespace blunted {
     SDL_LockSurface(surface);
 
     Uint32 color32;
-    if (SDL_ISPIXELFORMAT_ALPHA(surface->format->format)) color32 = SDL_MapRGBA(surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), alpha);
-                                   else color32 = SDL_MapRGB( surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
+    if (SDL_ISPIXELFORMAT_ALPHA(surface->format)) color32 = SDL_MapSurfaceRGBA(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), alpha);
+                                   else color32 = SDL_MapSurfaceRGB(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
 
     assert(x < surface->w && y < surface->h);
     sdl_putpixel(surface, x, y, color32);
@@ -127,9 +127,11 @@ namespace blunted {
     image->resourceMutex.lock();
 
     SDL_Surface *surface = image->GetResource()->GetData();
+    SDL_LockSurface(surface);
     Uint32 color = sdl_getpixel(surface, x, y);
+    SDL_UnlockSurface(surface);
     Uint8 r, g, b;
-    SDL_GetRGB(color, surface->format, &r, &g, &b);
+    SDL_GetRGB(color, SDL_GetPixelFormatDetails(surface->format), NULL, &r, &g, &b);
     Vector3 returnValue(r, g, b);
 
     image->resourceMutex.unlock();
@@ -164,7 +166,7 @@ namespace blunted {
                 y + ysub >= 0 && y + ysub < surface->h) {
               Uint32 color32 = sdl_getpixel(surface, x + xsub, y + ysub);
               Uint8 r, g, b;
-              SDL_GetRGB(color32, surface->format, &r, &g, &b);
+              SDL_GetRGB(color32, SDL_GetPixelFormatDetails(surface->format), NULL, &r, &g, &b);
               color += Vector3(r, g, b);
               counter++;
             }
@@ -175,8 +177,8 @@ namespace blunted {
         color = color / counter;
 
         Uint32 color32;
-        if (SDL_ISPIXELFORMAT_ALPHA(surface->format->format)) color32 = SDL_MapRGBA(surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), 255);
-                                       else color32 = SDL_MapRGB(surface->format,  int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
+        if (SDL_ISPIXELFORMAT_ALPHA(surface->format)) color32 = SDL_MapSurfaceRGBA(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), 255);
+                                       else color32 = SDL_MapSurfaceRGB(surface,  int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
         sdl_putpixel(target, x, y, color32);
       }
 
@@ -198,8 +200,8 @@ namespace blunted {
     SDL_LockSurface(surface);
 
     Uint32 color32;
-    if (SDL_ISPIXELFORMAT_ALPHA(surface->format->format)) color32 = SDL_MapRGBA(surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), alpha);
-                                   else color32 = SDL_MapRGB(surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
+    if (SDL_ISPIXELFORMAT_ALPHA(surface->format)) color32 = SDL_MapSurfaceRGBA(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), alpha);
+                                   else color32 = SDL_MapSurfaceRGB(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
 
     sdl_line(surface, line.GetVertex(0).coords[0], line.GetVertex(0).coords[1], line.GetVertex(1).coords[0], line.GetVertex(1).coords[1], color32);
 
@@ -236,8 +238,8 @@ namespace blunted {
     //SDL_LockSurface(surface);
 
     Uint32 color32;
-    if (SDL_ISPIXELFORMAT_ALPHA(surface->format->format)) color32 = SDL_MapRGBA(surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), alpha);
-                                   else color32 = SDL_MapRGB(surface->format, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
+    if (SDL_ISPIXELFORMAT_ALPHA(surface->format)) color32 = SDL_MapSurfaceRGBA(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])), alpha);
+                                   else color32 = SDL_MapSurfaceRGB(surface, int(floor(color.coords[0])), int(floor(color.coords[1])), int(floor(color.coords[2])));
 
     sdl_rectangle_filled(surface, x, y, w, h, color32);
 
@@ -278,7 +280,7 @@ namespace blunted {
   void Image2D::DrawSimpleText(const std::string &caption, int x, int y, TTF_Font *font, const Vector3 &color, int alpha) { // todo: alpha doesn't work properly yet
 
     SDL_Color sdlColor = { (unsigned char)(color.coords[0]), (unsigned char)(color.coords[1]), (unsigned char)(color.coords[2]), 0 };
-    SDL_Surface *sdlText = TTF_RenderUTF8_Blended(font, caption.c_str(), sdlColor);
+    SDL_Surface *sdlText = TTF_RenderText_Blended(font, caption.c_str(), caption.length(), sdlColor);
     if (alpha != 255) sdl_setsurfacealpha(sdlText, alpha);
 
     assert(sdlText);
@@ -304,7 +306,7 @@ namespace blunted {
     subjectMutex.unlock();
 
 
-    SDL_FreeSurface(sdlText);
+    SDL_DestroySurface(sdlText);
   }
 
   void Image2D::Poke(e_SystemType targetSystemType) {

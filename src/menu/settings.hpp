@@ -17,7 +17,7 @@
 #include "utils/gui2/widgets/capturekey.hpp"
 
 #include "../hid/ihidevice.hpp"
-#include "SDL2/SDL_keycode.h"
+#include "SDL3/SDL_keycode.h"
 
 using namespace blunted;
 

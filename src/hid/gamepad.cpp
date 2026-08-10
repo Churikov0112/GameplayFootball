@@ -12,7 +12,18 @@
 HIDGamepad::HIDGamepad(int gamepadID) : gamepadID(gamepadID) {
 
   deviceType = e_HIDeviceType_Gamepad;
-  identifier = std::string(SDL_JoystickNameForIndex(gamepadID)) + " #" + int_to_str(gamepadID);
+  std::string name = "unknown";
+  int count = 0;
+  SDL_JoystickID *joystickIDs = SDL_GetJoysticks(&count);
+  if (gamepadID >= 0 && gamepadID < count) {
+    SDL_Joystick *joy = SDL_OpenJoystick(joystickIDs[gamepadID]);
+    if (joy) {
+      name = SDL_GetJoystickName(joy);
+      SDL_CloseJoystick(joy);
+    }
+  }
+  if (joystickIDs) SDL_free(joystickIDs);
+  identifier = name + " #" + int_to_str(gamepadID);
 
   LoadConfig();
 }

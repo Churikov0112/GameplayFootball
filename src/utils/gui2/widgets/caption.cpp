@@ -6,8 +6,6 @@
 
 #include "../windowmanager.hpp"
 
-#include "SDL2/SDL2_rotozoom.h"
-
 namespace blunted {
 
   Gui2Caption::Gui2Caption(Gui2WindowManager *windowManager, const std::string &name, float x_percent, float y_percent, float width_percent, float height_percent, const std::string &caption) : Gui2View(windowManager, name, x_percent, y_percent, width_percent, height_percent) {
@@ -65,19 +63,19 @@ namespace blunted {
     Vector3 textOutlineColor = outlineColor;
     SDL_Color textOutlineColorSDL = { Uint8(textOutlineColor.coords[0]), Uint8(textOutlineColor.coords[1]), Uint8(textOutlineColor.coords[2]) };
 
-    SDL_Surface *textSurfTmp = TTF_RenderUTF8_Blended(windowManager->GetStyle()->GetFont(e_TextType_Caption), caption.c_str(), textColorSDL);
-    SDL_Surface *textOutlineSurfTmp = TTF_RenderUTF8_Blended(windowManager->GetStyle()->GetFont(e_TextType_DefaultOutline), caption.c_str(), textOutlineColorSDL);
+    SDL_Surface *textSurfTmp = TTF_RenderText_Blended(windowManager->GetStyle()->GetFont(e_TextType_Caption), caption.c_str(), caption.length(), textColorSDL);
+    SDL_Surface *textOutlineSurfTmp = TTF_RenderText_Blended(windowManager->GetStyle()->GetFont(e_TextType_DefaultOutline), caption.c_str(), caption.length(), textOutlineColorSDL);
 
     int resW, resH;
-    TTF_SizeUTF8(windowManager->GetStyle()->GetFont(e_TextType_DefaultOutline), caption.c_str(), &resW, &resH);
+    TTF_GetStringSize(windowManager->GetStyle()->GetFont(e_TextType_DefaultOutline), caption.c_str(), caption.length(), &resW, &resH);
 
     float zoomy;
     renderedTextHeightPix = (float)textOutlineSurfTmp->h;
     zoomy = (float)(h - y_margin * 2) / renderedTextHeightPix;
-    SDL_Surface *textOutlineSurf = zoomSurface(textOutlineSurfTmp, zoomy, zoomy, 1);
-    SDL_Surface *textSurf = zoomSurface(textSurfTmp, zoomy, zoomy, 1);
-    SDL_FreeSurface(textOutlineSurfTmp);
-    SDL_FreeSurface(textSurfTmp);
+    SDL_Surface *textOutlineSurf = SDL_ScaleSurface(textOutlineSurfTmp, int(textOutlineSurfTmp->w * zoomy), int(textOutlineSurfTmp->h * zoomy), SDL_SCALEMODE_LINEAR);
+    SDL_Surface *textSurf = SDL_ScaleSurface(textSurfTmp, int(textSurfTmp->w * zoomy), int(textSurfTmp->h * zoomy), SDL_SCALEMODE_LINEAR);
+    SDL_DestroySurface(textOutlineSurfTmp);
+    SDL_DestroySurface(textSurfTmp);
 
     textWidth_percent = windowManager->GetWidthPercent(resW * zoomy);
 
@@ -94,7 +92,7 @@ namespace blunted {
     surfaceRes->resourceMutex.lock();
     SDL_Surface *surface = surfaceRes->GetResource()->GetData();
 
-    Uint32 color32 = SDL_MapRGBA(surface->format, 0, 0, 0, 0);
+    Uint32 color32 = SDL_MapSurfaceRGBA(surface, 0, 0, 0, 0);
     sdl_rectangle_filled(surface, 0, 0, surface->w, surface->h, color32);
     //printf("%i %i - %i %i - %i %i\n", surface->w, surface->h, textOutlineSurf->w, textOutlineSurf->h, textSurf->w, textSurf->h);
 
@@ -112,8 +110,8 @@ namespace blunted {
     }
     surfaceRes->resourceMutex.unlock();
 
-    SDL_FreeSurface(textOutlineSurf);
-    SDL_FreeSurface(textSurf);
+    SDL_DestroySurface(textOutlineSurf);
+    SDL_DestroySurface(textSurf);
 
     image->OnChange();
   }
@@ -134,7 +132,7 @@ namespace blunted {
     windowManager->GetCoordinates(x_percent, y_percent, width_percent, height_percent, x, y, w, h);
 
     int resW, resH;
-    TTF_SizeUTF8(windowManager->GetStyle()->GetFont(e_TextType_DefaultOutline), caption.substr(0, subStrLength).c_str(), &resW, &resH);
+    TTF_GetStringSize(windowManager->GetStyle()->GetFont(e_TextType_DefaultOutline), caption.substr(0, subStrLength).c_str(), subStrLength, &resW, &resH);
 
     float zoomy;
     zoomy = (float)h / (float)renderedTextHeightPix;

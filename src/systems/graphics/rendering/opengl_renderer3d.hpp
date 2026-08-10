@@ -20,10 +20,6 @@
 
 #include "interface_renderer3d.hpp"
 
-#ifdef WIN32
-#include <SDL2/SDL_syswm.h>
-#endif
-
 namespace blunted {
 
   class OpenGLRenderer3D : public Renderer3D {
@@ -164,10 +160,6 @@ namespace blunted {
       void DeleteSimpleVertexBuffer(VertexBufferID vertexBufferID);
       void InitializeOverlayAndQuadBuffers();
   };
-
-#ifdef WIN32
-  static SDL_SysWMinfo wmInfo;
-#endif
 
 }
 

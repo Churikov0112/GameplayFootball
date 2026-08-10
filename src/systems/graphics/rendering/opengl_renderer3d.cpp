@@ -27,7 +27,7 @@
 #endif
 
 #include <cmath>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #include "base/log.hpp"
 #include "managers/environmentmanager.hpp"
@@ -43,7 +43,7 @@
 #include "../resources/texture.hpp"
 
 #ifdef WIN32
-#include <SDL2/SDL_opengl_glext.h>
+#include <SDL3/SDL_opengl_glext.h>
 #endif
 
 namespace blunted {
@@ -378,8 +378,7 @@ struct GLfunctions {
 
 //#endif
 
-    window = SDL_CreateWindow("Gameplay Football", SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED, width, height,
+    window = SDL_CreateWindow("Gameplay Football", width, height,
                                 SDL_WINDOW_OPENGL /* | SDL_RESIZABLE*/ |
                                 (fullscreen ? SDL_WINDOW_FULLSCREEN : 0));
     context = SDL_GL_CreateContext(window);
@@ -512,7 +511,7 @@ struct GLfunctions {
     SDL_Surface *noise = IMG_Load("media/shaders/noise.png");
     noiseTexID = CreateTexture(e_InternalPixelFormat_RGB8, e_PixelFormat_RGB, noise->w, noise->h, false, true, false, false, false);
     UpdateTexture(noiseTexID, noise, false, false);
-    SDL_FreeSurface(noise);
+    SDL_DestroySurface(noise);
 
     // create buffers for overlay and simple quad rendering to use shaders instead of fixed pipeline
     InitializeOverlayAndQuadBuffers();
@@ -1452,6 +1451,23 @@ struct GLfunctions {
 
   // textures
 
+  // Pick the GL pixel format that matches the byte layout of an SDL surface.
+  // In SDL3, SDL_PIXELFORMAT_RGBA8888 stores R in the most significant byte,
+  // so in little-endian memory the bytes are A,B,G,R (GL_ABGR_EXT), not
+  // R,G,B,A (GL_RGBA). Deriving the format from the channel masks keeps the
+  // upload correct regardless of the surface's pixel format.
+  GLenum GetGLPixelFormatFromSurface(SDL_Surface *surface) {
+    const SDL_PixelFormatDetails *details = SDL_GetPixelFormatDetails(surface->format);
+    if (!details) return GL_RGBA;
+    if (details->bytes_per_pixel == 4) {
+      if (details->Rmask == 0x000000FF) return GL_RGBA;
+      if (details->Rmask == 0xFF000000) return GL_ABGR_EXT;
+      if (details->Rmask == 0x0000FF00) return GL_BGRA;
+      return GL_RGBA;
+    }
+    return GL_RGB;
+  }
+
   GLenum GetGLPixelFormat(e_PixelFormat pixelFormat) {
     GLenum format = GL_RGB;
 
@@ -1570,7 +1586,7 @@ struct GLfunctions {
     int height = source->h;
 
     SDL_LockSurface(source);
-    mapping.glTexImage2D(GL_TEXTURE_2D, 0, GetGLInternalPixelFormat(internalPixelFormat), width, height, 0, GetGLPixelFormat(pixelFormat), GL_UNSIGNED_BYTE, source->pixels);
+    mapping.glTexImage2D(GL_TEXTURE_2D, 0, GetGLInternalPixelFormat(internalPixelFormat), width, height, 0, GetGLPixelFormatFromSurface(source), GL_UNSIGNED_BYTE, source->pixels);
     SDL_UnlockSurface(source);
 
     if (mipmaps) {
@@ -1619,17 +1635,16 @@ struct GLfunctions {
     mapping.glBindTexture(GL_TEXTURE_2D, textureID);
 
     GLint type1 = GL_RGBA8;
-    GLint type2 = (alpha) ? GL_RGBA : GL_RGB;
 
     int x = 0;
     int y = 0;
     int w = source->w;
     int h = source->h;
 
-  SDL_LockSurface(source);
-  mapping.glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, type2, GL_UNSIGNED_BYTE,
-          source->pixels);
-  SDL_UnlockSurface(source);
+    SDL_LockSurface(source);
+    mapping.glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, GetGLPixelFormatFromSurface(source), GL_UNSIGNED_BYTE,
+            source->pixels);
+    SDL_UnlockSurface(source);
 
   if (mipmaps) {
     mapping.glGenerateMipmap(GL_TEXTURE_2D);
@@ -2245,18 +2260,9 @@ struct GLfunctions {
   void OpenGLRenderer3D::operator()() {
     Log(e_Notice, "OpenGLRenderer3D", "operator()()", "Starting OpenGLRenderer3D thread");
 
-    SDL_Init(SDL_INIT_VIDEO);
-
-    int flags = IMG_INIT_JPG | IMG_INIT_PNG;
-    int inited = IMG_Init(flags);
-
-    if ((inited & flags) != flags) {
-      printf("IMG_Init: Failed to init required jpg and png support!\n");
-      printf("IMG_Init: %s\n", IMG_GetError());
-    }
+    SDL_InitSubSystem(SDL_INIT_VIDEO);
 
     SDL_Event event;
-
     bool quit = false;
     while (!quit) {
 
@@ -2265,21 +2271,19 @@ struct GLfunctions {
       while (SDL_PollEvent(&event)) {
 
         // context losing/gaining focus
-        if (event.type == SDL_WINDOWEVENT) {
-          if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-            contextIsActive = false;
-          }
-          else if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
-            contextIsActive = true;
-          }
+        if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
+          contextIsActive = false;
+        }
+        else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
+          contextIsActive = true;
         }
 
         switch (event.type) {
-          case SDL_QUIT:
+          case SDL_EVENT_QUIT:
             EnvironmentManager::GetInstance().SignalQuit();
             break;
-          case SDL_KEYDOWN:
-            switch(event.key.keysym.sym) {
+          case SDL_EVENT_KEY_DOWN:
+            switch(event.key.key) {
               case SDLK_F12:
                 EnvironmentManager::GetInstance().SignalQuit();
                 break;
@@ -2311,7 +2315,6 @@ struct GLfunctions {
 
     Exit();
 
-    IMG_Quit();
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
     Log(e_Notice, "OpenGLRenderer3D", "operator()()", "Shutting down OpenGLRenderer3D thread");

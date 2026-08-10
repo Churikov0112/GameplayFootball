@@ -8,12 +8,13 @@
 namespace blunted {
 
   SDL_Surface *CreateSDLSurface(int width, int height) {
-    return SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_RLEACCEL, width, height, 32, r_mask, g_mask, b_mask, a_mask);
+    return SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA8888);
   }
 
   void sdl_putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel) {
 
-    int bpp = surface->format->BytesPerPixel;
+    const SDL_PixelFormatDetails *details = SDL_GetPixelFormatDetails(surface->format);
+    int bpp = details->bytes_per_pixel;
     // Here p is the address to the pixel we want to set
     Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
 
@@ -46,29 +47,37 @@ namespace blunted {
 
   Uint32 sdl_getpixel(const SDL_Surface *surface, int x, int y) {
 
-    int bpp = surface->format->BytesPerPixel;
+    const SDL_PixelFormatDetails *details = SDL_GetPixelFormatDetails(surface->format);
+    int bpp = details->bytes_per_pixel;
     // Here p is the address to the pixel we want to retrieve
     Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
 
+    Uint32 result;
     switch(bpp) {
     case 1:
-        return *p;
+        result = *p;
+        break;
 
     case 2:
-        return *(Uint16 *)p;
+        result = *(Uint16 *)p;
+        break;
 
     case 3:
         if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            return p[0] << 16 | p[1] << 8 | p[2];
+            result = p[0] << 16 | p[1] << 8 | p[2];
         else
-            return p[0] | p[1] << 8 | p[2] << 16;
+            result = p[0] | p[1] << 8 | p[2] << 16;
+        break;
 
     case 4:
-        return *(Uint32 *)p;
+        result = *(Uint32 *)p;
+        break;
 
     default:
-        return 0; // shouldn't happen, but avoids warnings
+        result = 0; // shouldn't happen, but avoids warnings
+        break;
     }
+    return result;
   }
 
   void sdl_line(SDL_Surface *surface, int x1, int y1, int x2, int y2, Uint32 color) {
@@ -99,7 +108,7 @@ namespace blunted {
     rect.y = y;
     rect.w = width;
     rect.h = height;
-    SDL_FillRect(surface, &rect, color);
+    SDL_FillSurfaceRect(surface, &rect, color);
   }
 
   void sdl_alphablit(SDL_Surface *src, SDL_Rect *srcrect, SDL_Surface *dst, SDL_Rect *dstrect) {
@@ -111,6 +120,9 @@ namespace blunted {
 
     Uint8 *pdst;
     Uint8 *psrc;
+
+    const SDL_PixelFormatDetails *srcDetails = SDL_GetPixelFormatDetails(src->format);
+    const SDL_PixelFormatDetails *dstDetails = SDL_GetPixelFormatDetails(dst->format);
 
     SDL_Rect srect;
     if (srcrect) {
@@ -137,12 +149,12 @@ namespace blunted {
       for (x = 0; x < (srect.w < drect.w ? srect.w : drect.w); x++) {
         psrc = (Uint8 *)src->pixels
                     + (y + srect.y)*src->pitch
-                          + (x + srect.x)*src->format->BytesPerPixel;
+                          + (x + srect.x)*srcDetails->bytes_per_pixel;
 
         /* copy value from source to destination */
         pdst = (Uint8 *)dst->pixels
                   + (y + drect.y)*dst->pitch
-                        + (x + drect.x)*dst->format->BytesPerPixel;
+                        + (x + drect.x)*dstDetails->bytes_per_pixel;
 
         float srcOpacity = psrc[3] / 256.0f;
         float dstOpacity = pdst[3] / 256.0f;
@@ -161,9 +173,7 @@ namespace blunted {
 
   void sdl_flipsurface(SDL_Surface *surface) {
     // tnx Sebastian Beschke!
-    SDL_Surface *result = SDL_CreateRGBSurface(surface->flags, surface->w, surface->h,
-      surface->format->BytesPerPixel * 8, surface->format->Rmask, surface->format->Gmask,
-      surface->format->Bmask, surface->format->Amask);
+    SDL_Surface *result = SDL_CreateSurface(surface->w, surface->h, surface->format);
 
     Uint8 *pixels = (Uint8*)surface->pixels;
     Uint8 *rpixels = (Uint8*)result->pixels;
@@ -176,7 +186,7 @@ namespace blunted {
     }
 
     memcpy(&pixels[0], &rpixels[0], pxlength);
-    SDL_FreeSurface(result);
+    SDL_DestroySurface(result);
   }
 
   void sdl_setsurfacealpha(SDL_Surface *surface, int alpha) {
@@ -189,7 +199,8 @@ namespace blunted {
 
     // the pitch of the surface. Used to determine where the next vertical line in pixels starts
     int pitch = surface->pitch;
-    int bpp = surface->format->BytesPerPixel;
+    const SDL_PixelFormatDetails *details = SDL_GetPixelFormatDetails(surface->format);
+    int bpp = details->bytes_per_pixel;
 
     // NOTE: since we are only modifying the alpha bytes we could simply read only that byte and then add 4 to get
     // to the next alpha byte. That approach depends on the endianess of the alpha byte and also the 32 bit pixel depth

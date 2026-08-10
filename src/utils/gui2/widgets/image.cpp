@@ -19,8 +19,6 @@
 
 #include "../windowmanager.hpp"
 
-#include "SDL2/SDL2_rotozoom.h"
-
 namespace blunted {
 
 Gui2Image::Gui2Image(Gui2WindowManager *windowManager, const std::string &name,
@@ -58,6 +56,7 @@ Gui2Image::Gui2Image(Gui2WindowManager *windowManager, const std::string &name,
       surfaceRes->resourceMutex.lock();
 
       SDL_Surface *imageSurfTmp = surfaceRes->GetResource()->GetData();
+      if (!imageSurfTmp) { surfaceRes->resourceMutex.unlock(); return; }
 
       int x, y, w, h;
       windowManager->GetCoordinates(x_percent, y_percent, width_percent, height_percent, x, y, w, h);
@@ -66,7 +65,12 @@ Gui2Image::Gui2Image(Gui2WindowManager *windowManager, const std::string &name,
       zoomx = (double)w / imageSurfTmp->w;
       double zoomy;
       zoomy = (double)h / imageSurfTmp->h;
-      SDL_Surface *imageSurf = zoomSurface(imageSurfTmp, zoomx, zoomy, 1);
+      int newW = int(imageSurfTmp->w * zoomx);
+      int newH = int(imageSurfTmp->h * zoomy);
+      if (newW < 1) newW = 1;
+      if (newH < 1) newH = 1;
+      SDL_Surface *imageSurf = SDL_ScaleSurface(imageSurfTmp, newW, newH, SDL_SCALEMODE_LINEAR);
+      if (!imageSurf) { surfaceRes->resourceMutex.unlock(); return; }
       //printf("actually resized to %i %i\n", imageSurf->w, imageSurf->h);
 
       surfaceRes->resourceMutex.unlock();
@@ -109,6 +113,7 @@ Gui2Image::Gui2Image(Gui2WindowManager *windowManager, const std::string &name,
       surfaceRes->resourceMutex.lock();
 
       SDL_Surface *imageSurfTmp = surfaceRes->GetResource()->GetData();
+      if (!imageSurfTmp) { surfaceRes->resourceMutex.unlock(); return; }
 
       int x, y, w, h;
       windowManager->GetCoordinates(x_percent, y_percent, width_percent, height_percent, x, y, w, h);
@@ -117,7 +122,12 @@ Gui2Image::Gui2Image(Gui2WindowManager *windowManager, const std::string &name,
       zoomx1 = (double)w / imageSurfTmp->w * zoomx;
       double zoomy1;
       zoomy1 = (double)h / imageSurfTmp->h * zoomy;
-      SDL_Surface *imageSurf = zoomSurface(imageSurfTmp, zoomx1, zoomy1, 1);
+      int newW = int(imageSurfTmp->w * zoomx1);
+      int newH = int(imageSurfTmp->h * zoomy1);
+      if (newW < 1) newW = 1;
+      if (newH < 1) newH = 1;
+      SDL_Surface *imageSurf = SDL_ScaleSurface(imageSurfTmp, newW, newH, SDL_SCALEMODE_LINEAR);
+      if (!imageSurf) { surfaceRes->resourceMutex.unlock(); return; }
       //printf("actually resized to %i %i\n", imageSurf->w, imageSurf->h);
 
       surfaceRes->resourceMutex.unlock();
@@ -131,11 +141,11 @@ Gui2Image::Gui2Image(Gui2WindowManager *windowManager, const std::string &name,
       SDL_Rect rect;
       rect.x = w * 0.5 - imageSurf->w * 0.5;
       rect.y = h * 0.5 - imageSurf->h * 0.5;
-      SDL_BlitSurface(imageSurf, NULL, surface, &rect);
+      if (surface) SDL_BlitSurface(imageSurf, NULL, surface, &rect);
 
       surfaceRes->resourceMutex.unlock();
 
-      SDL_FreeSurface(imageSurf);
+      SDL_DestroySurface(imageSurf);
 
       image->OnChange();
     }

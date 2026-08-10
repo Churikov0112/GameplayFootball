@@ -5,7 +5,7 @@
 #ifndef _HPP_GUI2_VIEW_ICONSELECTOR
 #define _HPP_GUI2_VIEW_ICONSELECTOR
 
-#include "SDL2/SDL_ttf.h"
+#include "SDL3_ttf/SDL_ttf.h"
 
 #include "../view.hpp"
 

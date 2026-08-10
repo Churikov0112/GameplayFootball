@@ -36,8 +36,8 @@ namespace blunted {
     SDL_Surface *sdlText = RenderTextSurface(empty, Vector3(0, 0, 0));
 
     // create power-of-2 version
-    bool alpha = SDL_ISPIXELFORMAT_ALPHA(sdlText->format->format);
-    SDL_Surface *sdlTextPow2 = SDL_CreateRGBSurface(alpha, pot(sdlText->w), pot(sdlText->h), 32, r_mask, g_mask, b_mask, a_mask);
+    bool alpha = SDL_ISPIXELFORMAT_ALPHA(sdlText->format);
+    SDL_Surface *sdlTextPow2 = SDL_CreateSurface(pot(sdlText->w), pot(sdlText->h), SDL_PIXELFORMAT_RGBA8888);
 
     //printf("address old: %i\n", sdlTextPow2);
 
@@ -45,7 +45,7 @@ namespace blunted {
     //sdl_putpixel(sdlTextPow2, 1, 1, SDL_MapRGB(sdlTextPow2->format, 255, 255, 255));
     //sdl_putpixel(sdlTextPow2, 4, 4, SDL_MapRGB(sdlTextPow2->format, 255, 155, 155));
 
-    SDL_FreeSurface(sdlText);
+    SDL_DestroySurface(sdlText);
 
 // todo: unique name?
     boost::intrusive_ptr < Resource<Surface> > surface = ResourceManagerPool::GetInstance().GetManager<Surface>(e_ResourceType_Surface)->Fetch("text2D #" + int_to_str(count), false, false);
@@ -95,9 +95,9 @@ namespace blunted {
     bla.h = sdlTextPow2->h;
 
     SDL_SetSurfaceAlphaMod(sdlText, SDL_ALPHA_OPAQUE);
-    SDL_FillRect(sdlTextPow2, &bla, SDL_MapRGBA(sdlTextPow2->format, 0, 0, 0, 0));
+    SDL_FillSurfaceRect(sdlTextPow2, &bla, SDL_MapSurfaceRGBA(sdlTextPow2, 0, 0, 0, 0));
     SDL_BlitSurface(sdlText, &rect, sdlTextPow2, &bla);
-    SDL_FreeSurface(sdlText);
+    SDL_DestroySurface(sdlText);
     //sdl_flipsurface(sdlTextPow2);
     SDL_SetSurfaceAlphaMod(sdlTextPow2, 128);
 
@@ -111,7 +111,7 @@ namespace blunted {
     SDL_Color sdlColor = { (unsigned char)(floor(color.coords[0] * 255.0)), (unsigned char)(floor(color.coords[1] * 255.0)), (unsigned char)(floor(color.coords[2] * 255.0)), 0 };
     SDL_Color sdlBackColor = { 0, 0, 0, 0 };
 
-    SDL_Surface *sdlText = TTF_RenderUTF8_Blended(font, text.c_str(), sdlColor);
+    SDL_Surface *sdlText = TTF_RenderText_Blended(font, text.c_str(), text.length(), sdlColor);
     //printf("Oh My Goodness, an error : %s\n", TTF_GetError());
     //SDL_Surface *sdlText = TTF_RenderText_Solid(font, text.c_str(), sdlColor);
 

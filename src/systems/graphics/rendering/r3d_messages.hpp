@@ -114,7 +114,7 @@ namespace blunted {
         // DAMN YOU SDL! this function won't actually copy right surface, just make a shallow copy instead. that explains a crash i got. fuuufuuuuuu
         //this->source = SDL_CreateRGBSurfaceFrom(source->pixels, source->w, source->h, 0, source->pitch, 0, 0, 0, 0);
         // use this hax instead. really SDL, no deep surface copy function? pfff
-        this->source = SDL_ConvertSurface(source, source->format, 0);
+        this->source = SDL_ConvertSurfaceAndColorspace(source, source->format, NULL, SDL_COLORSPACE_SRGB, 0);
         //assert(source->pixels != this->source->pixels);
       }
 
@@ -122,7 +122,7 @@ namespace blunted {
       virtual bool Execute(void *caller = NULL) {
         static_cast<Renderer3D*>(caller)->ResizeTexture(textureID, source, internalPixelFormat, pixelFormat, alpha, mipmaps);
 
-        SDL_FreeSurface(source);
+        SDL_DestroySurface(source);
 
         return true;
       }
@@ -143,7 +143,7 @@ namespace blunted {
         // DAMN YOU SDL! this function won't actually copy right surface, just make a shallow copy instead. that explains a crash i got. fuuufuuuuuu
         //this->source = SDL_CreateRGBSurfaceFrom(source->pixels, source->w, source->h, 0, source->pitch, 0, 0, 0, 0);
         // use this hax instead. really SDL, no deep surface copy function? pfff
-        this->source = SDL_ConvertSurface(source, source->format, 0);
+        this->source = SDL_ConvertSurfaceAndColorspace(source, source->format, NULL, SDL_COLORSPACE_SRGB, 0);
         //assert(source->pixels != this->source->pixels);
       }
 
@@ -151,7 +151,7 @@ namespace blunted {
       virtual bool Execute(void *caller = NULL) {
         static_cast<Renderer3D*>(caller)->UpdateTexture(textureID, source, alpha, mipmaps);
 
-        SDL_FreeSurface(this->source);
+        SDL_DestroySurface(this->source);
 
         return true;
       }

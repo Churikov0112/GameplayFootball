@@ -85,7 +85,7 @@ namespace blunted {
         bool repeat = true;
         bool mipmaps = true;
         bool bilinear = true;
-        bool alpha = SDL_ISPIXELFORMAT_ALPHA((image->format->format));
+        bool alpha = SDL_ISPIXELFORMAT_ALPHA(image->format);
         diffuseTexture->GetResource()->CreateTexture(alpha ? e_InternalPixelFormat_SRGBA8 : e_InternalPixelFormat_SRGB8, alpha ? e_PixelFormat_RGBA : e_PixelFormat_RGB, image->w, image->h, alpha, repeat, mipmaps, bilinear);
         diffuseTexture->GetResource()->UpdateTexture(image, alpha, true);
         surface->resourceMutex.unlock();

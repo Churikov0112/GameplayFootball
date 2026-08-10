@@ -51,63 +51,63 @@ namespace blunted {
 
     // init the joy!
 
-    SDL_Init(SDL_INIT_JOYSTICK);
-    for (int i = 0; i < SDL_NumJoysticks(); i++) {
-      joystick[i] = SDL_JoystickOpen(i);
+    SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+    int joystickCount = 0;
+    SDL_JoystickID *joystickIDs = SDL_GetJoysticks(&joystickCount);
+    for (int i = 0; i < joystickCount && i < _JOYSTICK_MAX; i++) {
+      joystick[i] = SDL_OpenJoystick(joystickIDs[i]);
     }
-    //SDL_JoystickEventState(SDL_IGNORE); // doesn't seem to work? bug?
-    SDL_JoystickEventState(SDL_ENABLE);
-    //printf("JOYSTICK EVENT STATE: %i (%i = ignore, %i = enable)\n", SDL_JoystickEventState(SDL_QUERY), SDL_IGNORE, SDL_ENABLE);
+    if (joystickIDs) SDL_free(joystickIDs);
   }
 
   UserEventManager::~UserEventManager() {
-    for (int i = 0; i < SDL_NumJoysticks(); i++) {
-      SDL_JoystickClose(joystick[i]);
+    int joystickCount = 0;
+    SDL_JoystickID *joystickIDs = SDL_GetJoysticks(&joystickCount);
+    for (int i = 0; i < joystickCount && i < _JOYSTICK_MAX; i++) {
+      if (joystick[i]) SDL_CloseJoystick(joystick[i]);
     }
+    if (joystickIDs) SDL_free(joystickIDs);
   }
 
   void UserEventManager::Exit() {
   }
 
   void UserEventManager::InputSDLEvent(const SDL_Event &event) {
-    int joyID = 0;
     switch (event.type) {
-      case SDL_KEYDOWN:
+      case SDL_EVENT_KEY_DOWN:
         keyPressedMutex.lock();
-        keyPressed[event.key.keysym.sym].pressTime_ms = EnvironmentManager::GetInstance().GetTime_ms();
-        lastKeyTime_ms = keyPressed[event.key.keysym.sym].pressTime_ms;
+        keyPressed[event.key.key].pressTime_ms = EnvironmentManager::GetInstance().GetTime_ms();
+        lastKeyTime_ms = keyPressed[event.key.key].pressTime_ms;
         keyPressedMutex.unlock();
         break;
-      case SDL_KEYUP:
+      case SDL_EVENT_KEY_UP:
         keyPressedMutex.lock();
-        keyPressed.erase(event.key.keysym.sym);
+        keyPressed.erase(event.key.key);
         keyPressedMutex.unlock();
         break;
-      case SDL_MOUSEBUTTONDOWN:
+      case SDL_EVENT_MOUSE_BUTTON_DOWN:
         mousePressedMutex.lock();
         mousePressed[event.button.button] = true;
         mousePressedMutex.unlock();
         break;
-      case SDL_MOUSEBUTTONUP:
+      case SDL_EVENT_MOUSE_BUTTON_UP:
         mousePressedMutex.lock();
         mousePressed[event.button.button] = false;
         mousePressedMutex.unlock();
         break;
-      case SDL_JOYAXISMOTION:
+      case SDL_EVENT_JOYSTICK_AXIS_MOTION:
         joyButtonPressedMutex.lock();
-        joyAxis[event.jaxis.which][event.jaxis.axis] = event.jaxis.value;
+        if (event.jaxis.which < _JOYSTICK_MAX) joyAxis[event.jaxis.which][event.jaxis.axis] = event.jaxis.value;
         joyButtonPressedMutex.unlock();
         break;
-      case SDL_JOYBUTTONDOWN:
+      case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
         joyButtonPressedMutex.lock();
-        joyID = event.jaxis.which;
-        joyButtonPressed[joyID][event.jbutton.button] = true;
+        if (event.jbutton.which < _JOYSTICK_MAX) joyButtonPressed[event.jbutton.which][event.jbutton.button] = true;
         joyButtonPressedMutex.unlock();
         break;
-      case SDL_JOYBUTTONUP:
+      case SDL_EVENT_JOYSTICK_BUTTON_UP:
         joyButtonPressedMutex.lock();
-        joyID = event.jaxis.which;
-        joyButtonPressed[joyID][event.jbutton.button] = false;
+        if (event.jbutton.which < _JOYSTICK_MAX) joyButtonPressed[event.jbutton.which][event.jbutton.button] = false;
         joyButtonPressedMutex.unlock();
         break;
     }
@@ -150,7 +150,7 @@ namespace blunted {
   Vector3 UserEventManager::GetMouseRelativePos() const {
     Vector3 mousePos;
     mousePos.coords[2] = 0;
-    int x, y;
+    float x, y;
     SDL_GetRelativeMouseState(&x, &y);
     mousePos.coords[0] = x;
     mousePos.coords[1] = y;

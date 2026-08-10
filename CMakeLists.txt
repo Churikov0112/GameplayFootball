@@ -27,10 +27,9 @@ endif(UNIX)
 
 # Find required libraries
 FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(SDL2 REQUIRED)
-FIND_PACKAGE(SDL2_image REQUIRED)
-FIND_PACKAGE(SDL2_ttf REQUIRED)
-FIND_PACKAGE(SDL2_gfx REQUIRED)
+FIND_PACKAGE(SDL3 REQUIRED)
+FIND_PACKAGE(SDL3_image REQUIRED)
+FIND_PACKAGE(SDL3_ttf REQUIRED)
 FIND_PACKAGE(Boost REQUIRED COMPONENTS system thread filesystem)
 FIND_PACKAGE(OpenAL REQUIRED)
 FIND_PACKAGE(SQLite3 REQUIRED)
@@ -150,17 +149,13 @@ add_library(blunted2 STATIC
 target_include_directories(blunted2 PUBLIC
         ${PROJECT_SOURCE_DIR}/src
         ${OPENGL_INCLUDE_DIR}
-        ${SDL2_INCLUDE_DIR}
-        ${SDL2_IMAGE_DIRS}
-        ${SDL2_TTF_DIRS}
-        ${SDL2_GFX_DIRS}
         ${Boost_INCLUDE_DIR}
         ${OPENAL_INCLUDE_DIR}
         ${SQLite3_INCLUDE_DIRS})
 target_link_libraries(blunted2 PUBLIC
         Boost::filesystem Boost::system Boost::thread SQLite::SQLite3
-        ${SDL2_IMAGE_LIBRARIES} ${SDL2_TTF_LIBRARIES} ${SDL2_GFX_LIBRARIES}
-        ${SDL2_LIBRARIES} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
+        SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf
+        ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 if(UNIX)
    target_link_libraries(blunted2 PUBLIC dl m)
 endif(UNIX)
@@ -170,13 +165,10 @@ endif(UNIX)
 set(ALL_INCLUDE_DIRS
         ${PROJECT_SOURCE_DIR}/src
         ${OPENGL_INCLUDE_DIR}
-        ${SDL2_INCLUDE_DIR}
-        ${SDL2_IMAGE_DIRS}
-        ${SDL2_TTF_DIRS}
-        ${SDL2_GFX_DIRS}
         ${Boost_INCLUDE_DIR}
         ${OPENAL_INCLUDE_DIR}
-        ${SQLite3_INCLUDE_DIRS})
+        ${SQLite3_INCLUDE_DIRS}
+        ${SDL3_INCLUDE_DIRS})
 
 function(apply_common_includes target)
   target_include_directories(${target} PRIVATE ${ALL_INCLUDE_DIRS})

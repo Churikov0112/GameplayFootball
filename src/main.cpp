@@ -7,7 +7,11 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <shellapi.h>
 #endif
+
+#include <vector>
+#include <string>
 
 #include "main.hpp"
 
@@ -37,7 +41,7 @@
 
 #include "utils/orbitcamera.hpp"
 
-#include "SDL2/SDL_ttf.h"
+#include "SDL3_ttf/SDL_ttf.h"
 
 #if defined(WIN32) && defined(__MINGW32__)
 #undef main
@@ -271,4 +275,24 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
+#if defined(WIN32) && !defined(__MINGW32__)
+// SDL3 no longer provides a SDLmain shim that maps WinMain to main on
+// Windows GUI (WIN32) executables, so provide one here. Command-line
+// arguments are reconstructed from the Win32 command line.
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+  int argc = 0;
+  LPWSTR *argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
+  std::vector<std::string> argvStrings;
+  std::vector<char*> argvPtrs;
+  for (int i = 0; i < argc; i++) {
+    std::wstring warg(argvW[i]);
+    std::string arg(warg.begin(), warg.end());
+    argvStrings.push_back(arg);
+  }
+  if (argvW) LocalFree(argvW);
+  for (int i = 0; i < argc; i++) argvPtrs.push_back(const_cast<char*>(argvStrings[i].c_str()));
+  return main(argc, &argvPtrs[0]);
+}
+#endif
 

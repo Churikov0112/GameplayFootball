@@ -19,7 +19,7 @@ namespace blunted {
   // load file into resource
   void ImageLoader::Load(std::string filename, boost::intrusive_ptr < Resource <Surface> > resource) {
     SDL_Surface *surface = IMG_Load(filename.c_str());
-    if (!surface) Log(e_FatalError, "ImageLoader", "Load", "Could not load " + filename + ": " + IMG_GetError());
+    if (!surface) Log(e_FatalError, "ImageLoader", "Load", "Could not load " + filename + ": " + SDL_GetError());
     resource->GetResource()->SetData(surface);
   }
 
