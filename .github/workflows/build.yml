@@ -48,6 +48,13 @@ jobs:
             echo "TODO: verify hash, see docs/wiki/otkrytye-voprosy.md"
           fi
 
+      - name: Upload reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-linux.txt
+          path: tools/determinism/reference-linux.txt
+          if-no-files-found: ignore
+
   # Windows x86: build (Win32) + check against the committed reference.txt.
   windows-x86:
     runs-on: windows-latest
