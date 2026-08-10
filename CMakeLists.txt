@@ -33,9 +33,10 @@ FIND_PACKAGE(SDL3_ttf REQUIRED)
 # System/distro boost builds (Ubuntu libboost-all-dev, Homebrew) are done with b2,
 # which installs only the main BoostConfig.cmake and not the modular per-component
 # configs, so find_package(Boost COMPONENTS ...) fails against them. Force FindBoost's
-# manual search, which works with any boost layout.
+# manual search, which works with any boost layout. Boost.System is header-only since
+# 1.69 (no compiled lib ships anywhere), so it is not requested as a component.
 set(Boost_NO_BOOST_CMAKE ON)
-FIND_PACKAGE(Boost REQUIRED COMPONENTS system thread filesystem)
+FIND_PACKAGE(Boost REQUIRED COMPONENTS thread filesystem)
 FIND_PACKAGE(OpenAL REQUIRED)
 FIND_PACKAGE(SQLite3 REQUIRED)
 
@@ -158,7 +159,7 @@ target_include_directories(blunted2 PUBLIC
         ${OPENAL_INCLUDE_DIR}
         ${SQLite3_INCLUDE_DIRS})
 target_link_libraries(blunted2 PUBLIC
-        Boost::filesystem Boost::system Boost::thread SQLite::SQLite3
+        Boost::filesystem Boost::thread SQLite::SQLite3
         SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf
         ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 if(UNIX)
