@@ -9,7 +9,7 @@ This file provides guidance to agents working with code in this repository.
 и собран по изменениям Google Brain (ветка `google_brain`). Цель репозитория — собираться и запускаться на как
 можно большем числе платформ. Движок «Blunted2» лежит в репозитории (`src/base`, `src/types`, `src/scene`,
 `src/systems`, `src/managers`, `src/framework`); игра поверх него — `src/onthepitch`, `src/menu`, `src/league`, `src/data`.
-Windows: локально x86 (Win32), CI дополнительно собирает x64. macOS: компилируется, но не запускается.
+Windows: локально x86 (Win32). macOS: компилируется, но не запускается.
 
 **Актуальная картина проекта живёт в вики: `docs/wiki/index.md` — начинать оттуда.** Этот файл
 несёт только то, что сломаешь, *не зная, где посмотреть*; предметные детали — в вики, а
@@ -85,7 +85,8 @@ cmake --build . --parallel --config Release
 **macOS**: собирается через brew (sdl3 sdl3_image sdl3_ttf boost openal-soft), но **не запускается**
 (рендеринг обязан идти в main thread — см. `docs/wiki/открытые-вопросы`).
 
-CI — `.github/workflows/build.yml`: сборка + determinism check на Linux/Windows (macOS — только сборка).
+Проверка регрессии геймплея — вручную через `tools/determinism` (эталоны см.
+`docs/wiki/открытые-вопросы`). CI в GitHub нет.
 
 Тестов и линта в проекте нет — проверка компиляцией: `cmake --build` в каталоге сборки.
 

@@ -98,3 +98,15 @@ preview-раннер `ubuntu-26.04` гасится посреди сборки, 
 Linux/macos вынесены из CI, проверка переносится на локальные девайсы (см.
 `docs/wiki/открытые-вопросы.md`). `reference-linux.txt` — TODO (снять на Linux-устройстве).
 Малый boost-набор в vcpkg (component-порты) ускорил Windows-джобы с ~57 до ~10-15 мин.
+
+## [2026-08-10] decision | GitHub Actions CI убран, проверка детерминизма — вручную
+Windows x86+x64 собрались и подтвердили оба эталона на CI (VS2026: x86 `372c4bbd...`, x64
+`4e9ddb72...`), но linux/macos-джобы оказались нестабильны: preview-раннер `ubuntu-26.04` гасится
+посреди сборки, контейнер `ubuntu:26.04` зависает на teardown, сборка SDL3 из исходников упёрлась
+в нехватку `libasound2-dev`, macOS build-only висит часами. Решение: `.github/workflows` удалён,
+проверка детерминизма — вручную через `tools/determinism` на локальных машинах (у автора есть
+Windows/Linux/Mac-девайсы). Эталоны остаются локальным инструментом; `reference-linux.txt` — TODO
+(снять на Linux-девайсе). Полезные фиксы из CI-итераций остались в коде: `Boost_NO_BOOST_CMAKE` +
+компоненты `thread filesystem` (дистрибутивный boost не даёт компонентных CMake-конфигов и не
+собирает `libboost_system` с 1.69), `MockAudioRenderer` (`audio_renderer=mock`) для headless-запуска
+без аудио-устройства.
