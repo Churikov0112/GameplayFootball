@@ -125,3 +125,15 @@ Windows/Linux/Mac-девайсы). Эталоны остаются локаль�
 запускается в WSLg и корректно завершается, linux-эталон `reference-linux.txt` =
 `a672aa0b81d6275e60a6469b1c41dfdf9acff138` (воспроизводим, check → 0). Windows-хэши не изменились
 (x86 `372c4bbd...`, x64 `4e9ddb72...`).
+
+## [2026-08-10] session | macOS-девайс: сборка собралась, игра не завелась; ветка влита в master
+На MacBook Air M2 (arm64, 8 ГБ) ветка `build-modernization` собралась после порт-фиксов
+(brew sdl3/sdl3_image/sdl3_ttf/boost/openal-soft; сборка без параллелизма — 8 ГБ RAM). Запуск
+подтвердил известный блокер: окно/GL-контекст создаются в отдельном потоке
+(`GraphicsSystem::Initialize` → `OpenGLRenderer3D::Run`), а AppKit требует main thread → игра не
+стартует. Фикс (создание окна/контекста в main thread) отложен; статус перенесён в
+«Отложено осознанно» в вики. Детерминизм на macOS не снимался (игра не работает, эталон не нужен).
+Порт-фиксы, найденные на Linux/WSL и подтвердившиеся на macOS: `EnvStateFatal()` вместо
+`blunted::Log` в шаблоне (циклический инклюд defines↔log), SDL3 display-mode API в `settings.cpp`,
+`reinterpret_cast<void*>` для `SDL_GL_GetProcAddress`, `-Wl,--start-group` для GNU ld.
+Ветка `build-modernization` влита в `master`.
