@@ -28,6 +28,7 @@ enum e_MenuAction {
 
 struct SideSelection {
   int controllerID;
+  SDL_JoystickID joystickID; // stable device key, 0 for keyboard
   Gui2Image *controllerImage;
   int side; // -1, 0, 1
 };

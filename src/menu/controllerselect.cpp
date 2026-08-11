@@ -44,6 +44,8 @@ ControllerSelectPage::ControllerSelectPage(Gui2WindowManager *windowManager, con
   for (unsigned int i = 0; i < controllers.size(); i++) {
     SideSelection side;
     side.controllerID = i;
+    side.joystickID = (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) ?
+                      static_cast<HIDGamepad*>(controllers.at(i))->GetJoystickID() : 0;
     if (inGame) {
       side.side = sides.at(i).side;
     } else {
@@ -61,9 +63,28 @@ ControllerSelectPage::ControllerSelectPage(Gui2WindowManager *windowManager, con
     side.controllerImage->Show();
     if (!inGame) sides.push_back(side); else sides.at(i) = side;
     delay.push_back(0);
+
+    layoutToggle[i] = 0;
+    if (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) {
+      HIDGamepad *gamepad = static_cast<HIDGamepad*>(controllers.at(i));
+      std::string layoutStr = (gamepad->GetLayout() == e_ControllerLayout_PES) ? "PES" : "FIFA";
+      layoutToggle[i] = new Gui2Button(windowManager, "button_controllerselect_layout" + int_to_str(i), 0, 0, 12, 3, "layout: " + layoutStr);
+      layoutToggle[i]->SetPosition(43 + side.side * 25, 27 + i * 15); // below the controller image row
+      layoutToggle[i]->sig_OnClick.connect(boost::bind(&ControllerSelectPage::ToggleLayout, this, i));
+      this->AddView(layoutToggle[i]);
+      layoutToggle[i]->Show();
+    }
   }
 
   SetImagePositions();
+
+  // focus the first gamepad layout toggle so the windowing 'activate' (button A) reaches it
+  for (int i = 1; i < (signed int)controllers.size(); i++) {
+    if (layoutToggle[i]) {
+      layoutToggle[i]->SetFocus();
+      break;
+    }
+  }
 
   this->Show();
 }
@@ -76,6 +97,13 @@ void ControllerSelectPage::SetImagePositions() {
     int x = 43 + sides.at(i).side * 25;
     sides.at(i).controllerImage->SetPosition(x, 20 + i * 15);
   }
+}
+
+void ControllerSelectPage::ToggleLayout(int controllerID) {
+  HIDGamepad *gamepad = static_cast<HIDGamepad*>(GetControllers().at(controllerID));
+  gamepad->SetLayout(gamepad->GetLayout() == e_ControllerLayout_PES ? e_ControllerLayout_FIFA : e_ControllerLayout_PES);
+  std::string layoutStr = (gamepad->GetLayout() == e_ControllerLayout_PES) ? "PES" : "FIFA";
+  layoutToggle[controllerID]->SetCaption("layout: " + layoutStr);
 }
 
 void ControllerSelectPage::Process() {

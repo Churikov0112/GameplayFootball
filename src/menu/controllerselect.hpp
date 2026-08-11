@@ -13,6 +13,8 @@
 #include "utils/gui2/widgets/button.hpp"
 #include "utils/gui2/widgets/image.hpp"
 
+#include "hid/gamepad.hpp"
+
 #include "../onthepitch/match.hpp"
 
 using namespace blunted;
@@ -24,6 +26,7 @@ class ControllerSelectPage : public Gui2Page {
     virtual ~ControllerSelectPage();
 
     void SetImagePositions();
+    void ToggleLayout(int controllerID);
 
     virtual void Process();
     virtual void ProcessKeyboardEvent(KeyboardEvent *event);
@@ -34,6 +37,8 @@ class ControllerSelectPage : public Gui2Page {
     std::vector<SideSelection> sides;
     std::vector<unsigned long> delay;
     bool inGame;
+
+    Gui2Button *layoutToggle[_JOYSTICK_MAX];
 
 };
 
