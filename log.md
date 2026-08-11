@@ -110,3 +110,18 @@ Windows/Linux/Mac-девайсы). Эталоны остаются локаль�
 компоненты `thread filesystem` (дистрибутивный boost не даёт компонентных CMake-конфигов и не
 собирает `libboost_system` с 1.69), `MockAudioRenderer` (`audio_renderer=mock`) для headless-запуска
 без аудио-устройства.
+
+## [2026-08-10] session | Linux (WSL2 Ubuntu 26.04): сборка зелёная, эталон снят, найдены порт-фиксы
+На этом ПК поднят WSL2 с Ubuntu 26.04 LTS, ветка `build-modernization` собрана. Всплыли четыре
+бага портируемости, которые MSVC не ловил: (1) циклический инклюд `defines.hpp`↔`log.hpp` скрывал
+`blunted::Log` при включении `log.hpp` первым (gcc, two-phase lookup) — в `defines.hpp` добавлен
+хелпер `blunted::EnvStateFatal()`, определён в `envstate.cpp`; (2) `settings.cpp` держал SDL2-код
+перечисления display modes в не-Windows ветке (`SDL_GetNumDisplayModes`/`SDL_GetDisplayMode` убраны
+из SDL3) — переведено на `SDL_GetDisplays` + `SDL_GetDesktopDisplayMode`/`SDL_GetCurrentDisplayMode`;
+(3) `SDL_GL_GetProcAddress` в SDL3 возвращает `SDL_FunctionPointer`, а не `void*` — добавлен
+`reinterpret_cast<void*>` в макрос `SDL_PROC` (`opengl_renderer3d.cpp`); (4) статические игровые
+библиотеки с циклическими ссылками не линкуются на GNU ld — в CMakeLists добавлен
+`-Wl,--start-group/-end-group` (UNIX AND NOT APPLE). После фиксов: Linux-сборка зелёная, игра
+запускается в WSLg и корректно завершается, linux-эталон `reference-linux.txt` =
+`a672aa0b81d6275e60a6469b1c41dfdf9acff138` (воспроизводим, check → 0). Windows-хэши не изменились
+(x86 `372c4bbd...`, x64 `4e9ddb72...`).
