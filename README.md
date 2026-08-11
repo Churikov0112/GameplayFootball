@@ -1,136 +1,97 @@
 ## Gameplay Football
-Football game, a fork of discontinued [GameplayFootball](https://github.com/BazkieBumpercar/GameplayFootball) written by [Bastiaan Konings Schuiling](http://www.properlydecent.com/).
 
-In 2019, Google Brain team picked up a game and created a Reinforcement Learning environment based on it - [Google Research Football](https://github.com/google-research/football). They made some improvements to the game, updated the libraries, but threw away everything (e.g. menus, audio effects, etc.) that was not necessary for their task.
+Football game. This repository is a **fork of [vi3itor/GameplayFootball](https://github.com/vi3itor/GameplayFootball)**,
+itself a fork of the discontinued [GameplayFootball](https://github.com/BazkieBumpercar/GameplayFootball)
+written by [Bastiaan Konings Schuiling](http://www.properlydecent.com/).
 
-The goal of this repository is to update the existing code, based on Google Brain's changes (see `google_brain` branch) and other forks, and make it compiling and running on as many platforms as possible. PRs are always welcome.  
+In 2019, Google Brain picked up the game and created a Reinforcement Learning environment based on it —
+[Google Research Football](https://github.com/google-research/football). They improved the game and
+updated the libraries, but threw away everything (menus, audio, HUD) that was not necessary for their RL task.
+
+### What this fork adds
+
+- Modern build: CMake 3.16+, C++17, a single static `blunted2` engine library, `sources.cmake` removed.
+- SDL2 → SDL3 (SDL3_image/SDL3_ttf; SDL_gfx dropped).
+- Builds on Windows (MSVC + vcpkg), Linux (gcc), macOS (build-only — the game does not run there yet,
+  rendering must happen on the main thread).
+- Determinism tooling: `tools/determinism` runs the match headless and fingerprints the simulation
+  (SHA-1) to catch unintended gameplay changes. Platform references live in `tools/determinism/`.
+- Project documentation lives in the wiki: `docs/wiki/index.md`.
 
 ## Building from source
 
 ### Linux
-Install required dependencies: 
+
+Install required dependencies (SDL3 apt packages exist since Ubuntu 26.04 LTS):
 ```bash
 sudo apt-get install git cmake build-essential libgl1-mesa-dev libsdl3-dev \
 libsdl3-image-dev libsdl3-ttf-dev libopenal-dev libboost-all-dev \
 libsqlite3-dev
 ```
-Note: the SDL3 apt packages only exist since Ubuntu 26.04 LTS.
 
-Run the following commands:
+Build and run:
 ```bash
 # Clone the repository
-git clone https://github.com/vi3itor/GameplayFootball.git
+git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
 
-# Copy the contents of `data` directory into `build`
-cp -R data/. build
+# Configure, build, and copy the data next to the binaries
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+cp -R data/. build/
 
-# Go to `build` directory
+# Run from the build directory (the game uses relative data paths)
 cd build
-# Generate Makefile
-cmake ..
-# Compile the game
-make -j$(nproc)
-```
-
-Run the game:
-```bash
 ./gameplayfootball
 ```
 
-### MacOS (Work in Progress)
-**Important**: Currently, the game can be compiled on Mac OS, but it is not running yet, because rendering must be done on the Main Thread.
+### macOS (build only — the game does not run yet)
 
-To install required dependencies you need [`brew`](https://brew.sh/) which can be installed in Terminal by running:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-```
+**Important**: the game compiles on macOS, but does not run yet, because rendering must happen on
+the main thread (see `docs/wiki/открытые-вопросы.md`).
 
 ```bash
-# Install dependencies
+# Install dependencies (requires brew)
 brew install git cmake sdl3 sdl3_image sdl3_ttf boost openal-soft
-# Navigate to the directory where you want to put the repository
-cd ~
-# Clone the repository
-git clone https://github.com/vi3itor/GameplayFootball.git
+
+# Clone and build
+git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
-# Copy the contents of `data` directory into `build`
-cp -R data/. build
-
-# Go to `build` directory
-cd build
-# Generate Makefile
-cmake ..
-# Compile the game
-make -j$(nproc)
-
-# Run the game (Currently is not working)
-./gameplayfootball
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)"
+cmake --build build --parallel
 ```
 
-
-
-### Windows (Work in Progress)
+### Windows
 
 Download and install:
-- [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/),
+- [Visual Studio](https://visualstudio.microsoft.com/downloads/) (2019 or newer),
 - [Git](https://git-scm.com/download/win),
 - [CMake](https://cmake.org/download/) (make sure to add it to the system PATH).
 
-Install [`vcpkg`](https://github.com/microsoft/vcpkg) as explained in [Quick Start Guide](https://github.com/microsoft/vcpkg#quick-start-windows) or simply:
-create a directory, e.g. `C:\dev`, open Command Prompt and run the following commands: 
+Install [`vcpkg`](https://github.com/microsoft/vcpkg) as explained in the
+[Quick Start Guide](https://github.com/microsoft/vcpkg#quick-start-windows). Install the dependencies
+(all triplets **must be `x86-windows`**):
 ```bat
-% Navigate to the created directory
-cd C:\dev
-
-% Clone vckpg
-git clone https://github.com/microsoft/vcpkg
-
-% Run installation script
-.\vcpkg\bootstrap-vcpkg.bat
-```
-Install required dependencies (all triplets **must be `x86-windows`**):
-```bat 
 .\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl3 sdl3-image[jpeg,png] sdl3-ttf openal-soft sqlite3
 ```
 
+Build and run:
 ```bat
-% Navigate to the directory where you want to put the repository
-cd C:\dev
-
-% Clone repository
-git clone https://github.com/vi3itor/GameplayFootball.git 
+git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
 
-% Build from the main branch (the `windows` branch is obsolete)
-git switch main
+cmake -B build -A Win32 -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
+cmake --build build --config Release --parallel
 
-
-% Copy the contents of `data` directory into `build\Debug` or (and) `build\Release`
-xcopy /e /i data build\Debug
 xcopy /e /i data build\Release
 ```
-Go to `build` directory and generate `cmake` files. Make sure that you correctly set the directory for `vcpkg` (in our case it is installed into `C:\dev\vcpkg`):
-```bat
-cd build
 
-cmake .. -DCMAKE_GENERATOR_PLATFORM=Win32 -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE  
-```
-To build `Release` version:
-```bat
-cmake --build . --parallel --config Release
-```
-For `Debug` version:
-```bat
-cmake --build . --parallel --config Debug
-```
+Run `gameplayfootball.exe` inside `build\Release` (the game uses relative data paths).
 
-That's it! Run `gameplayfootball.exe` inside `build\Release` directory (or inside `build\Debug` for `Debug` version)
+## Problems?
 
-
-## Problems? 
-If you have any problems please open an issue. 
-
+If you have any problems, please open an issue.
 
 ### Donate
+
 If you want to thank Bastiaan for his great work, consider a donation to his Bitcoin address 1JHnTe2QQj8RL281fXFiyvK9igj2VhPh2t
