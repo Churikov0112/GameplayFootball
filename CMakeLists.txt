@@ -267,7 +267,14 @@ add_executable(gameplayfootball WIN32
         src/dbquery.cpp
         src/gamedefines.cpp)
 apply_common_includes(gameplayfootball)
-target_link_libraries(gameplayfootball PRIVATE ${LIBRARIES})
+# GNU ld resolves static library references left-to-right; the game libraries
+# have circular references (e.g. hidlib <-> gamecontextlib), so group them on
+# Linux. MSVC/ld64 tolerate the flat order.
+if(UNIX AND NOT APPLE)
+  target_link_libraries(gameplayfootball PRIVATE -Wl,--start-group ${LIBRARIES} -Wl,--end-group)
+else()
+  target_link_libraries(gameplayfootball PRIVATE ${LIBRARIES})
+endif()
 
 # determinism_runner needs the core sources (utils, gamedefines, gametask, dbquery, misc)
 # but NOT main.cpp (which would conflict with its own main()).
@@ -280,4 +287,8 @@ add_executable(determinism_runner
         src/dbquery.cpp
         src/gamedefines.cpp)
 apply_common_includes(determinism_runner)
-target_link_libraries(determinism_runner PRIVATE ${LIBRARIES})
+if(UNIX AND NOT APPLE)
+  target_link_libraries(determinism_runner PRIVATE -Wl,--start-group ${LIBRARIES} -Wl,--end-group)
+else()
+  target_link_libraries(determinism_runner PRIVATE ${LIBRARIES})
+endif()

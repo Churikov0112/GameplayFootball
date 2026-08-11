@@ -390,7 +390,7 @@ struct GLfunctions {
 #define SDL_PROC(ret,func,params)                                        \
   do {                                                                     \
     *reinterpret_cast<void **>(&(mapping.func)) =                          \
-        SDL_GL_GetProcAddress(#func);                                      \
+        reinterpret_cast<void*>(SDL_GL_GetProcAddress(#func));             \
     if (!mapping.func) {                                                   \
       printf("Couldn't load GL function %s: %s\n", #func, SDL_GetError()); \
       SDL_SetError("Couldn't load GL function %s: %s\n", #func,            \

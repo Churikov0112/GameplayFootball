@@ -1219,19 +1219,20 @@ GraphicsPage::GraphicsPage(Gui2WindowManager *windowManager, const Gui2PageData 
     if (res.bpp == 32) if (!CheckDuplicate(resolutions, res.x, res.y)) resolutions.push_back(res);
   }
 #else
-    int display = 0;
-    int modes = SDL_GetNumDisplayModes(display);
-    for (int i = 0; i < modes; ++i) {
-        SDL_DisplayMode mode = { SDL_PIXELFORMAT_UNKNOWN, 0, 0, 0, 0 };
-        SDL_GetDisplayMode(display, i, &mode);
-        Resolution res;
-        res.x = mode.w;
-        res.y = mode.h;
-        res.bpp = SDL_BITSPERPIXEL(mode.format);
-        res.fullscreen = false;
-        if (!CheckDuplicate(resolutions, res.x, res.y))
-        resolutions.push_back(res);
+    int displayCount = 0;
+    SDL_DisplayID *displays = SDL_GetDisplays(&displayCount);
+    for (int d = 0; d < displayCount; ++d) {
+      const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(displays[d]);
+      if (!mode) mode = SDL_GetCurrentDisplayMode(displays[d]);
+      if (!mode) continue;
+      Resolution res;
+      res.x = mode->w;
+      res.y = mode->h;
+      res.bpp = SDL_BITSPERPIXEL(mode->format);
+      res.fullscreen = false;
+      if (!CheckDuplicate(resolutions, res.x, res.y)) resolutions.push_back(res);
     }
+    SDL_free(displays);
 #endif
 
   // add fullscreen res'es

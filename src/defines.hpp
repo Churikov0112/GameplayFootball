@@ -44,6 +44,11 @@ namespace blunted {
 
   void randomize(unsigned int seed);
 
+  // EnvState fatal path. Declared here (not in log.hpp) so the EnvState templates
+  // below never depend on include order: log.hpp -> defines.hpp and defines.hpp ->
+  // log.hpp form a cycle that hides blunted::Log when log.hpp is included first.
+  void EnvStateFatal();
+
   class Vector3;
   class Quaternion;
 
@@ -84,7 +89,7 @@ class EnvState {
   template<typename T> void process(T& obj) {
     if (load) {
       if (pos + sizeof(T) > state.size()) {
-        blunted::Log(blunted::e_FatalError, "EnvState", "process", "state is invalid");
+        blunted::EnvStateFatal();
       }
       memcpy(&obj, &state[pos], sizeof(T));
       pos += sizeof(T);

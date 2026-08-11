@@ -1,5 +1,6 @@
 #include "envstate.hpp"
 
+#include "../base/log.hpp"
 #include "../base/math/vector3.hpp"
 #include "../base/math/quaternion.hpp"
 
@@ -7,6 +8,10 @@
 // destructors (vptr), so memcpy would capture the vtable address which is
 // stable within one binary but changes between rebuilds. Serialize only the
 // data members instead.
+
+void blunted::EnvStateFatal() {
+  Log(e_FatalError, "EnvState", "process", "state is invalid");
+}
 
 void EnvState::process(blunted::Vector3 &value) {
   process(value.coords[0]);
