@@ -9,6 +9,9 @@
 
 #include "../../hid/keyboard.hpp"
 
+#include "../../hid/gamepad.hpp"
+#include "../../managers/usereventmanager.hpp"
+
 #include "managers/environmentmanager.hpp"
 
 using namespace blunted;
@@ -99,17 +102,26 @@ void ReplayPage::ProcessKeyboardEvent(KeyboardEvent *event) {
 
 void ReplayPage::ProcessJoystickEvent(JoystickEvent *event) {
 
-  int controllerID = 0;
   const std::vector<IHIDevice*> &controllers = GetControllers();
-  HIDGamepad *gamepad = static_cast<HIDGamepad*>(controllers.at(controllerID + 1)); // todo: check if we can be sure this is actually a joystick/gamepad
-  bool button1 = event->GetButton(0, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_LongPass))) ||
-                 event->GetButton(0, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_ShortPass))); // need 2 options because maybe the first is set to gui's 'escape' function
-  bool button2 = event->GetButton(0, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_HighPass))) ||
-                 event->GetButton(0, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_Shot))); // need 2 options because maybe the first is set to gui's 'escape' function
+  HIDGamepad *gamepad = 0;
+  int joyID = -1;
+  for (unsigned int c = 1; c < controllers.size(); c++) {
+    if (controllers.at(c)->GetDeviceType() == e_HIDeviceType_Gamepad) {
+      gamepad = static_cast<HIDGamepad*>(controllers.at(c));
+      joyID = UserEventManager::GetInstance().GetSlotForJoystickID(gamepad->GetJoystickID());
+      if (joyID != -1) break;
+    }
+  }
+  if (!gamepad || joyID == -1) return;
+
+  bool button1 = event->GetButton(joyID, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_LongPass))) ||
+                 event->GetButton(joyID, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_ShortPass))); // need 2 options because maybe the first is set to gui's 'escape' function
+  bool button2 = event->GetButton(joyID, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_HighPass))) ||
+                 event->GetButton(joyID, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_Shot))); // need 2 options because maybe the first is set to gui's 'escape' function
 
   Vector3 direction;
-  direction.coords[0] = event->GetAxis(0, 0);
-  direction.coords[1] = event->GetAxis(0, 1);
+  direction.coords[0] = event->GetAxis(joyID, 0);
+  direction.coords[1] = event->GetAxis(joyID, 1);
 
   float deadzone = 0.2f;
   if (fabs(direction.coords[0]) < deadzone) {

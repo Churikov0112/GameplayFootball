@@ -9,6 +9,9 @@
 #include "framework/scheduler.hpp"
 #include "managers/taskmanager.hpp"
 #include "managers/resourcemanagerpool.hpp"
+#include "managers/environmentmanager.hpp"
+#include "menu/pagefactory.hpp"
+#include "base/properties.hpp"
 
 #include "blunted.hpp"
 
@@ -124,6 +127,35 @@ void GameTask::GetPhase() {
 }
 
 void GameTask::ProcessPhase() {
+
+  RefreshGamepads();
+
+  // if a human gamepad was unplugged mid-match: pause and open controller select on top
+  if (match) {
+    unsigned long now_ms = EnvironmentManager::GetInstance().GetTime_ms();
+    if (now_ms - lastGamepadCheckTime_ms > 1000) {
+      lastGamepadCheckTime_ms = now_ms;
+      bool anyGamerDeviceMissing = false;
+      const std::vector<SideSelection> sides = GetMenuTask()->GetControllerSetup();
+      const std::vector<IHIDevice*> &controllers = GetControllers();
+      for (unsigned int i = 0; i < sides.size(); i++) {
+        if (sides.at(i).side == 0) continue;
+        if (sides.at(i).joystickID == 0) continue; // keyboard
+        bool found = false;
+        for (unsigned int c = 1; c < controllers.size(); c++) {
+          if (static_cast<HIDGamepad*>(controllers.at(c))->GetJoystickID() == sides.at(i).joystickID) { found = true; break; }
+        }
+        if (!found) { anyGamerDeviceMissing = true; break; }
+      }
+      if (anyGamerDeviceMissing) {
+        // pause and open pause menu with controller select on top
+        GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage((int)e_PageID_Ingame, Properties(), 0);
+        Properties csProps;
+        csProps.SetBool("isInGame", true);
+        GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage((int)e_PageID_ControllerSelect, csProps, 0);
+      }
+    }
+  }
 
   for (unsigned int i = 0; i < GetControllers().size(); i++) {
     GetControllers().at(i)->Process();

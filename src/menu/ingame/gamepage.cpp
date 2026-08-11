@@ -14,6 +14,9 @@
 
 #include "../../onthepitch/match.hpp"
 
+#include "../../managers/usereventmanager.hpp"
+#include "../../hid/gamepad.hpp"
+
 using namespace blunted;
 
 GamePage::GamePage(Gui2WindowManager *windowManager, const Gui2PageData &pageData) : Gui2Page(windowManager, pageData), match(0) {
@@ -163,7 +166,8 @@ void GamePage::ProcessJoystickEvent(JoystickEvent *event) {
 
     if (controllers.at(c)->GetDeviceType() == e_HIDeviceType_Gamepad) {
       HIDGamepad *gamepad = static_cast<HIDGamepad*>(controllers.at(c));
-      int joyID = gamepad->GetGamepadID(); // these should be the same IDs the GUI system uses as joyID
+      int joyID = UserEventManager::GetInstance().GetSlotForJoystickID(gamepad->GetJoystickID());
+      if (joyID == -1) continue;
 
       if (event->GetButton(joyID, gamepad->GetControllerMapping(gamepad->GetFunctionMapping(e_ButtonFunction_Start)))) {
 

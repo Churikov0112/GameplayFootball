@@ -99,6 +99,8 @@ class GameTask : public IUserTask {
 
     boost::shared_ptr<Scene3D> scene3D;
 
+    unsigned long lastGamepadCheckTime_ms = 0; // rate-limit mid-match unplug detection
+
 };
 
 #endif
