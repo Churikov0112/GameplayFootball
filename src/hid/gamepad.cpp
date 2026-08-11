@@ -73,13 +73,6 @@ void HIDGamepad::LoadConfig() {
     previousControllerButtonState[i] = false;
   }
 
-  for (int i = 0; i < _JOYSTICK_MAXAXES; i++) {
-    float min = GetConfiguration()->GetReal(("input_gamepad_" + GetIdentifier() + "_calibration_" + int_to_str(i) + "_min").c_str(), -32768);
-    float max = GetConfiguration()->GetReal(("input_gamepad_" + GetIdentifier() + "_calibration_" + int_to_str(i) + "_max").c_str(), 32767);
-    float rest = GetConfiguration()->GetReal(("input_gamepad_" + GetIdentifier() + "_calibration_" + int_to_str(i) + "_rest").c_str(), 0);
-    UserEventManager::GetInstance().SetJoystickAxisCalibration(GetGamepadID(), i, min, max, rest);
-  }
-
   std::string gpbuttonIDs_string[14];
   for (int i = 0; i < e_ControllerButton_Size; i++) {
 

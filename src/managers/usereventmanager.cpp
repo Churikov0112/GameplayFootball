@@ -39,9 +39,6 @@ namespace blunted {
       }
       for (int i = 0; i < _JOYSTICK_MAXAXES; i++) {
         joyAxis[j][i] = 0.0;
-        joyAxisCalibration[j][i][0] = -32768.0;
-        joyAxisCalibration[j][i][1] = 32767.0;
-        joyAxisCalibration[j][i][2] = 0.0;
       }
       gamepad[j] = 0;
       joystickID[j] = 0;
@@ -222,38 +219,6 @@ namespace blunted {
     float value = joyAxis[joyID][axisID];
     if (deadzone && fabs(value) < 0.05f) value = 0.0f;
     return value;
-  }
-
-  float UserEventManager::GetJoystickAxisRaw(int joyID, int axisID) const {
-    boost::mutex::scoped_lock lock(joyButtonPressedMutex);
-    return joyAxis[joyID][axisID];
-  }
-
-  float UserEventManager::GetJoystickAxisCalibrationMin(int joyID, int axisID) {
-    boost::mutex::scoped_lock lock(joyButtonPressedMutex);
-    return joyAxisCalibration[joyID][axisID][0];
-  }
-
-  float UserEventManager::GetJoystickAxisCalibrationMax(int joyID, int axisID) {
-    boost::mutex::scoped_lock lock(joyButtonPressedMutex);
-    return joyAxisCalibration[joyID][axisID][1];
-  }
-
-  float UserEventManager::GetJoystickAxisCalibrationRest(int joyID, int axisID) {
-    boost::mutex::scoped_lock lock(joyButtonPressedMutex);
-    return joyAxisCalibration[joyID][axisID][2];
-  }
-
-  void UserEventManager::SetJoystickAxisCalibration(int joyID, int axisID, float min, float max, float rest) {
-    boost::mutex::scoped_lock lock(joyButtonPressedMutex);
-    joyAxisCalibration[joyID][axisID][0] = min;
-    joyAxisCalibration[joyID][axisID][1] = max;
-    joyAxisCalibration[joyID][axisID][2] = rest;
-
-    // rest has to be within min/max range
-    if (joyAxisCalibration[joyID][axisID][2] < joyAxisCalibration[joyID][axisID][0]) joyAxisCalibration[joyID][axisID][2] = joyAxisCalibration[joyID][axisID][0];
-    if (joyAxisCalibration[joyID][axisID][2] > joyAxisCalibration[joyID][axisID][1]) joyAxisCalibration[joyID][axisID][2] = joyAxisCalibration[joyID][axisID][1];
-    joyAxis[joyID][axisID] = rest;
   }
 
 }

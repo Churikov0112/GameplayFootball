@@ -69,11 +69,6 @@ namespace blunted {
       void SetJoyButtonState(int joyID, int sdlJoyButtonID, bool newState);
 
       float GetJoystickAxis(int joyID, int axisID, bool deadzone = true) const;
-      float GetJoystickAxisRaw(int joyID, int axisID) const;
-      float GetJoystickAxisCalibrationMin(int joyID, int axisID);
-      float GetJoystickAxisCalibrationMax(int joyID, int axisID);
-      float GetJoystickAxisCalibrationRest(int joyID, int axisID);
-      void SetJoystickAxisCalibration(int joyID, int axisID, float min, float max, float rest);
 
     protected:
       void RescanGamepads();
@@ -90,7 +85,6 @@ namespace blunted {
       int gamepadCount = 0; // actual count, updated in RescanGamepads (thread-safe read for GetJoystickCount)
       bool joyButtonPressed[_JOYSTICK_MAX][_JOYSTICK_MAXBUTTONS];
       float joyAxis[_JOYSTICK_MAX][_JOYSTICK_MAXAXES];
-      float joyAxisCalibration[_JOYSTICK_MAX][_JOYSTICK_MAXAXES][3]; // min, max, rest
 
       mutable boost::mutex keyPressedMutex;
       mutable boost::mutex mousePressedMutex;

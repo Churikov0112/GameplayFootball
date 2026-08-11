@@ -132,10 +132,6 @@ Gui2Page *PageFactory::CreatePage(const Gui2PageData &pageData) {
       page = new GamepadSetupPage(windowManager, pageData);
       break;
 
-    case e_PageID_GamepadCalibration:
-      page = new GamepadCalibrationPage(windowManager, pageData);
-      break;
-
     case e_PageID_GamepadMapping:
       page = new GamepadMappingPage(windowManager, pageData);
       break;
