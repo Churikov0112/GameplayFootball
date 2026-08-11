@@ -236,8 +236,6 @@ namespace blunted {
 
     renderer->UseShader("postprocess");
 
-    //renderer->SetUniformFloat("postprocess", "brightness", (float)renderer->HDRGetOverallBrightness());
-
     renderer->SetUniformFloat("postprocess", "contextWidth", (float)view.width);
     renderer->SetUniformFloat("postprocess", "contextHeight", (float)view.height);
     renderer->SetUniformFloat("postprocess", "contextX", (float)view.x);
@@ -268,9 +266,6 @@ namespace blunted {
     renderer->SetTextureUnit(0);
     renderer->BindTexture(0);
 
-
-    // too slow
-    //renderer->HDRCaptureOverallBrightness();
 
     // back to the context viewport
     renderer->UseShader("");

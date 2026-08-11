@@ -54,9 +54,6 @@ namespace blunted {
       virtual void SetDepthTesting(bool OnOff);
       virtual void SetDepthMask(bool OnOff);
       virtual void SetBlendingFunction(e_BlendingFunction blendingFunction1, e_BlendingFunction blendingFunction2);
-      virtual void SetTextureMode(e_TextureMode textureMode);
-      virtual void SetColor(const Vector3 &color, float alpha);
-      virtual void SetColorMask(bool r, bool g, bool b, bool alpha);
 
       virtual void ClearBuffer(const Vector3 &color, bool clearDepth, bool clearColor);
 
@@ -68,11 +65,6 @@ namespace blunted {
       virtual void UpdateVertexBuffer(VertexBufferID vertexBufferID, float *vertices, unsigned int verticesDataSize);
       virtual void DeleteVertexBuffer(VertexBufferID vertexBufferID);
       virtual void RenderVertexBuffer(const std::deque<VertexBufferQueueEntry> &vertexBufferQueue, e_RenderMode renderMode = e_RenderMode_Full);
-      virtual void RenderAABB(std::list<VertexBufferQueueEntry> &vertexBufferQueue);
-      virtual void RenderAABB(std::list<LightQueueEntry> &lightQueue);
-
-      // lights
-      virtual void SetLight(const Vector3 &position, const Vector3 &color, float radius);
 
       // textures
       virtual int CreateTexture(e_InternalPixelFormat internalPixelFormat, e_PixelFormat pixelFormat, int width, int height, bool alpha = false, bool repeat = true, bool mipmaps = true, bool filter = true, bool multisample = false, bool compareDepth = false);
@@ -82,7 +74,6 @@ namespace blunted {
       virtual void CopyFrameBufferToTexture(int textureID, int width, int height);
       virtual void BindTexture(int textureID);
       virtual void SetTextureUnit(int textureUnit);
-      virtual void SetClientTextureUnit(int textureUnit);
 
       // frame buffers
       virtual int CreateFrameBuffer();
@@ -104,8 +95,6 @@ namespace blunted {
 
       // utility
       virtual void SetFOV(float angle);
-      virtual void PushAttribute(int attr);
-      virtual void PopAttribute();
       virtual void SetViewport(int x, int y, int width, int height);
       virtual void GetContextSize(int &width, int &height, int &bpp);
       virtual void SetPolygonOffset(float scale, float bias);
@@ -121,9 +110,6 @@ namespace blunted {
       virtual void SetUniformFloat3Array(const std::string &shaderName, const std::string &varName, int count, float *values);
       virtual void SetUniformMatrix4(const std::string &shaderName, const std::string &varName, const Matrix4 &mat);
 
-      virtual void HDRCaptureOverallBrightness();
-      virtual float HDRGetOverallBrightness();
-
       void operator()();
 
     protected:
@@ -138,8 +124,6 @@ namespace blunted {
       int noiseTexID;
 
       float FOV;
-
-      float overallBrightness;
 
       float largest_supported_anisotropy;
       void SetMaxAnisotropy();

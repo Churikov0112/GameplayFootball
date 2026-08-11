@@ -137,3 +137,21 @@ Windows/Linux/Mac-девайсы). Эталоны остаются локаль�
 `blunted::Log` в шаблоне (циклический инклюд defines↔log), SDL3 display-mode API в `settings.cpp`,
 `reinterpret_cast<void*>` для `SDL_GL_GetProcAddress`, `-Wl,--start-group` для GNU ld.
 Ветка `build-modernization` влита в `master`.
+
+## [2026-08-11] feat | Ворота №3: рендер на OpenGL 3.2 core profile (ветка `render-modernization`)
+Рендерер `OpenGLRenderer3D` переведён с legacy (compatibility) контекста на **core profile 3.2**:
+в `CreateContext` включены `SDL_GL_CONTEXT_MAJOR_VERSION=3`, `MINOR=2`,
+`SDL_GL_CONTEXT_PROFILE_CORE`. Деferred-конвейер (GBuffer → accumulation → postprocess) был уже
+шейдерным (`#version 150`) и VAO/VBO-ориентированным; единственные активные fixed-function-вызовы
+сидели в мёртвых методах интерфейса `Renderer3D`. Убраны legacy-методы и их реализации:
+`SetColor` (`glColor4f`), `SetTextureMode`, `RenderAABB`×2 (`glBegin/glEnd`, тело уже в комментарии),
+`SetLight` (`glLightfv`, тело уже в комментарии), `SetClientTextureUnit` (`glClientActiveTexture`),
+`PushAttribute`/`PopAttribute` (`glPushAttrib`/`glPopAttrib`), `SetColorMask`, HDR-захват яркости;
+удалены `drawSphere` и point-light-ветка `RenderLights` (light.type всегда 0). `sdl_glfuncs.h`:
+28 deprecated-функций переведены `SDL_PROC`→`SDL_PROC_UNUSED` — под core profile
+`SDL_GL_GetProcAddress` вернул бы NULL и лоадер упал бы с `exit(1)`. Проверки: полная сборка MSVC
+(Win32) зелёная, `determinism_runner check 372c4bbd...` → 0, запуск игры подтверждает
+`Using OpenGL version 3.2 ... Core Profile Context` без ошибок/предупреждений (меню рендерится,
+FBO complete). GLES-перевод шейдеров (`#version 300 es`) — отдельная задача, в
+`docs/wiki/открытые-вопросы`. План: `docs/plans/2026-08-11-render-modernization.md`. Ветка в master
+не влита.

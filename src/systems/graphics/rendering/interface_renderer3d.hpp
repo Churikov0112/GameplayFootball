@@ -97,11 +97,6 @@ namespace blunted {
     AABB aabb;
   };
 
-  enum e_MatrixMode {
-    e_MatrixMode_Projection,
-    e_MatrixMode_ModelView
-  };
-
   enum e_CullingMode {
     e_CullingMode_Off,
     e_CullingMode_Front,
@@ -127,11 +122,6 @@ namespace blunted {
     e_DepthFunction_LessOrEqual,
     e_DepthFunction_NotEqual,
     e_DepthFunction_Always
-  };
-
-  enum e_TextureMode {
-    e_TextureMode_Off,
-    e_TextureMode_2D
   };
 
   enum e_TargetAttachment {
@@ -232,9 +222,6 @@ namespace blunted {
       virtual void SetDepthTesting(bool OnOff) = 0;
       virtual void SetDepthMask(bool OnOff) = 0;
       virtual void SetBlendingFunction(e_BlendingFunction blendingFunction1, e_BlendingFunction blendingFunction2) = 0;
-      virtual void SetTextureMode(e_TextureMode textureMode) = 0;
-      virtual void SetColor(const Vector3 &color, float alpha) = 0;
-      virtual void SetColorMask(bool r, bool g, bool b, bool alpha) = 0;
 
       virtual void ClearBuffer(const Vector3 &color, bool clearDepth, bool clearColor) = 0;
 
@@ -246,11 +233,6 @@ namespace blunted {
       virtual void UpdateVertexBuffer(VertexBufferID vertexBufferID, float *vertices, unsigned int verticesDataSize) = 0;
       virtual void DeleteVertexBuffer(VertexBufferID vertexBufferID) = 0;
       virtual void RenderVertexBuffer(const std::deque<VertexBufferQueueEntry> &vertexBufferQueue, e_RenderMode renderMode = e_RenderMode_Full) = 0;
-      virtual void RenderAABB(std::list<VertexBufferQueueEntry> &vertexBufferQueue) = 0;
-      virtual void RenderAABB(std::list<LightQueueEntry> &lightQueue) = 0;
-
-      // lights
-      virtual void SetLight(const Vector3 &position, const Vector3 &color, float radius) = 0;
 
       // textures
       virtual int CreateTexture(e_InternalPixelFormat internalPixelFormat, e_PixelFormat pixelFormat, int width, int height, bool alpha = false, bool repeat = true, bool mipmaps = true, bool filter = true, bool multisample = false, bool compareDepth = false) = 0;
@@ -260,7 +242,6 @@ namespace blunted {
       virtual void CopyFrameBufferToTexture(int textureID, int width, int height) = 0;
       virtual void BindTexture(int textureID) = 0;
       virtual void SetTextureUnit(int textureUnit) = 0;
-      virtual void SetClientTextureUnit(int textureUnit) = 0;
 
       // frame buffer
       virtual int CreateFrameBuffer() = 0;
@@ -282,8 +263,6 @@ namespace blunted {
 
       // utility
       virtual void SetFOV(float angle) = 0;
-      virtual void PushAttribute(int attr) = 0;
-      virtual void PopAttribute() = 0;
       virtual void SetViewport(int x, int y, int width, int height) = 0;
       virtual void GetContextSize(int &width, int &height, int &bpp) = 0;
       virtual void SetPolygonOffset(float scale, float bias) = 0;
@@ -297,9 +276,6 @@ namespace blunted {
       virtual void SetUniformFloat3(const std::string &shaderName, const std::string &varName, float value1, float value2, float value3) = 0;
       virtual void SetUniformFloat3Array(const std::string &shaderName, const std::string &varName, int count, float *values) = 0;
       virtual void SetUniformMatrix4(const std::string &shaderName, const std::string &varName, const Matrix4 &mat) = 0;
-
-      virtual void HDRCaptureOverallBrightness() = 0;
-      virtual float HDRGetOverallBrightness() = 0;
 
       void operator()() = 0;
 

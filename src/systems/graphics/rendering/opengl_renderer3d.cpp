@@ -58,7 +58,6 @@ struct GLfunctions {
 
   OpenGLRenderer3D::OpenGLRenderer3D() : context(0), contextIsActive(true) {
     FOV = 45;
-    overallBrightness = 128;
 
     _cache_activeTextureUnit = -1;
 
@@ -148,41 +147,8 @@ struct GLfunctions {
     SetCullingMode(e_CullingMode_Back);
   }
 
-  void drawSphere(float r, int lats, int longs) {
-  // Never called (because light.type is always set to 0) and uses deprecated methods.
-  // Possible implementation, that uses modern OpenGl can be found here:
-  // https://gist.github.com/zwzmzd/0195733fa1210346b00d
-  /*
-    int i, j;
-    for (i = 0; i <= lats; i++) {
-      float lat0 = pi * (-0.5 + (float) (i - 1) / lats);
-      float z0 = std::sin(lat0);
-      float zr0 = std::cos(lat0);
-
-      float lat1 = pi * (-0.5 + (float) i / lats);
-      float z1 = std::sin(lat1);
-      float zr1 = std::cos(lat1);
-
-      mapping.glBegin(GL_QUAD_STRIP);
-      for (j = 0; j <= longs; j++) {
-          float lng = 2 * pi * (float) (j - 1) / longs;
-          float x = std::cos(lng);
-          float y = std::sin(lng);
-
-          mapping.glNormal3f(x * zr0, y * zr0, z0);
-          mapping.glVertex3f(x * zr0 * r, y * zr0 * r, z0 * r);
-          mapping.glNormal3f(x * zr1, y * zr1, z1);
-          mapping.glVertex3f(x * zr1 * r, y * zr1 * r, z1 * r);
-      }
-      mapping.glEnd();
-    }
-   */
-  }
-
   void OpenGLRenderer3D::RenderLights(std::deque<LightQueueEntry> &lightQueue, const Matrix4 &projectionMatrix, const Matrix4 &viewMatrix) {
-    Vector3 cameraPos = viewMatrix.GetInverse().GetTranslation();
-
-    SetUniformFloat3(currentShader->first, "cameraPosition", cameraPos.coords[0], cameraPos.coords[1], cameraPos.coords[2]);
+    SetUniformFloat3(currentShader->first, "cameraPosition", viewMatrix.GetInverse().GetTranslation().coords[0], viewMatrix.GetInverse().GetTranslation().coords[1], viewMatrix.GetInverse().GetTranslation().coords[2]);
 
     std::deque<LightQueueEntry>::iterator lightIter = lightQueue.begin();
 
@@ -208,59 +174,23 @@ struct GLfunctions {
       SetUniformFloat(currentShader->first, "lightRadius", light.radius);
       SetUniformFloat3(currentShader->first, "lightPosition", light.position.coords[0], light.position.coords[1], light.position.coords[2]);
 
-      int quad_or_sphere = 1;
-      if (light.type == 0) {
+      // light.type is always 0 (directional light), so the light volume is the
+      // fullscreen quad; the former point-light sphere branch (fixed-function
+      // drawSphere) was dead code and removed with the legacy renderer.
+      SetCullingMode(e_CullingMode_Off);
+      SetDepthFunction(e_DepthFunction_Always);
 
-      quad_or_sphere = 0;  // directional light: visible anyway, everywhere.
-                           // draw fullscreen quad
-
-      } else if (light.type == 1) { // sphere
-        AABB aabb = light.aabb;
-        // get the spherical bounding box of the aabb
-        // if the camera is inside this sphere, draw a fullscreen quad instead of a sphere
-        // else, the sphere wouldn't be rendered..
-        //float boundingSphereRadius = aabb.GetRadius();//light.position.GetDistance(Vector3(aabb.minxyz.coords[0], aabb.minxyz.coords[1], aabb.minxyz.coords[2]));
-        if (cameraPos.GetDistance(light.position) <= aabb.GetRadius()) {
-          // cam is within light radius, draw all
-          quad_or_sphere = 0;
-        } else {
-          quad_or_sphere = 1;
-        }
-      }
-
-      if (quad_or_sphere == 0) {
-
-        // QUAD
-
-        SetCullingMode(e_CullingMode_Off);
-        SetDepthFunction(e_DepthFunction_Always);
-
-        Matrix4 orthoMatrix = CreateOrthoMatrix(-1, 1, -1, 1, 0.0f, 1.0f);
-        SetMatrix("projectionMatrix", orthoMatrix);
-        Matrix4 xviewMatrix(MATRIX4_IDENTITY);
-        xviewMatrix.SetTranslation(Vector3(0, 0, -0.5f));
-        SetMatrix("viewMatrix", xviewMatrix);
-        Matrix4 modelMatrix(MATRIX4_IDENTITY);
-        SetMatrix("modelMatrix", modelMatrix);
+      Matrix4 orthoMatrix = CreateOrthoMatrix(-1, 1, -1, 1, 0.0f, 1.0f);
+      SetMatrix("projectionMatrix", orthoMatrix);
+      Matrix4 xviewMatrix(MATRIX4_IDENTITY);
+      xviewMatrix.SetTranslation(Vector3(0, 0, -0.5f));
+      SetMatrix("viewMatrix", xviewMatrix);
+      Matrix4 modelMatrix(MATRIX4_IDENTITY);
+      SetMatrix("modelMatrix", modelMatrix);
 
       mapping.glBindVertexArray(quadBuffer.vertexArrayID);
       mapping.glDrawArrays(GL_TRIANGLES, 0, 6);
       mapping.glBindVertexArray(0);
-    } else {  // Never called (because light.type is always set to 0)
-        // SPHERE
-
-        SetCullingMode(e_CullingMode_Back);
-        SetDepthFunction(e_DepthFunction_Less);
-
-        AABB aabb = light.aabb;
-
-        SetMatrix("projectionMatrix", projectionMatrix);
-        SetMatrix("viewMatrix", viewMatrix);
-        Matrix4 modelMatrix(MATRIX4_IDENTITY);
-        modelMatrix.SetTranslation(light.position);
-        SetMatrix("modelMatrix", modelMatrix);
-        drawSphere(aabb.GetRadius() * 0.52f, 6, 6);
-      }
 
       if (light.hasShadow) {
         mapping.glBindTexture(GL_TEXTURE_2D, 0);
@@ -362,21 +292,15 @@ struct GLfunctions {
 
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
-    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    // modern core profile: removes fixed-function (glBegin, matrix stack,
+    // lighting) and client-side arrays. The deferred pipeline is already
+    // shader+VAO based, so nothing relies on legacy GL state.
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    // todo: remember to enable this later on, after migrating to sdl 2 (though it is on by default with most drivers, or so it seems)
+    // todo: remember to enable this later on (though it is on by default with most drivers, or so it seems)
     //SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
-
-//    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-//    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-//    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-//recently disabled  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); // wait for vsync?
-//  int SDLerror = SDL_GL_SetSwapInterval(-1);
-//  if (SDLerror == -1) SDL_GL_SetSwapInterval(1);
-
-//#endif
 
     window = SDL_CreateWindow("Gameplay Football", width, height,
                                 SDL_WINDOW_OPENGL /* | SDL_RESIZABLE*/ |
@@ -773,30 +697,7 @@ struct GLfunctions {
     }
   }
 
-  void OpenGLRenderer3D::SetTextureMode(e_TextureMode textureMode) {
-    // todo: err its not a mode i guess
-    // Never called. Uses deprecated methods
-    /*
-      switch (textureMode) {
-
-        case e_TextureMode_Off:     mapping.glDisable(GL_TEXTURE_2D);
-                                    break;
-
-        case e_TextureMode_2D:      mapping.glEnable(GL_TEXTURE_2D);
-                                    break;
-      }
-     */
-    }
-
-    void OpenGLRenderer3D::SetColor(const Vector3 &color, float alpha) {
-      mapping.glColor4f(color.coords[0], color.coords[1], color.coords[2], alpha);
-    }
-
-    void OpenGLRenderer3D::SetColorMask(bool r, bool g, bool b, bool alpha) {
-      mapping.glColorMask(r, g, b, alpha);
-    }
-
-    void OpenGLRenderer3D::ClearBuffer(const Vector3 &color, bool clearDepth, bool clearColor) {
+  void OpenGLRenderer3D::ClearBuffer(const Vector3 &color, bool clearDepth, bool clearColor) {
   //xx    glClearColor(color.coords[0], color.coords[1], color.coords[2], 0.0);
       //REDUNDANT? deprecated?
   //xx    glClearDepth(1.0f);
@@ -1311,144 +1212,6 @@ struct GLfunctions {
     mapping.glBindVertexArray(0);
   }
 
-  void OpenGLRenderer3D::RenderAABB(std::list<VertexBufferQueueEntry> &vertexBufferQueue) {
-    /* VK: Not used. Delete it
-    mapping.glDisable(GL_LIGHTING);
-    mapping.glPolygonMode(GL_FRONT, GL_FILL);
-    mapping.glColor3f(0, 1, 0);
-
-    mapping.glBegin(GL_LINES);
-
-    std::list<VertexBufferQueueEntry>::iterator vertexBufferQueueIter = vertexBufferQueue.begin();
-    while (vertexBufferQueueIter != vertexBufferQueue.end()) {
-      VertexBufferQueueEntry *queueEntry = &(*vertexBufferQueueIter);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      vertexBufferQueueIter++;
-    }
-
-    mapping.glEnd();
-    */
-  }
-
-  void OpenGLRenderer3D::RenderAABB(std::list<LightQueueEntry> &lightQueue) {
-    /* VK: Not used. Delete it
-    mapping.glDisable(GL_LIGHTING);
-    mapping.glPolygonMode(GL_FRONT, GL_FILL);
-    mapping.glColor3f(0, 0, 1);
-
-    mapping.glBegin(GL_LINES);
-
-    std::list<LightQueueEntry>::iterator lightQueueIter = lightQueue.begin();
-    while (lightQueueIter != lightQueue.end()) {
-      LightQueueEntry *queueEntry = &(*lightQueueIter);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.minxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.minxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.minxyz.coords[2]);
-      mapping.glVertex3f(queueEntry->aabb.maxxyz.coords[0], queueEntry->aabb.maxxyz.coords[1], queueEntry->aabb.maxxyz.coords[2]);
-
-      lightQueueIter++;
-    }
-
-    mapping.glEnd();
-     */
-  }
-
-
-  // lights
-
-  void OpenGLRenderer3D::SetLight(const Vector3 &position, const Vector3 &color, float radius) {
-    /* VK: Not used. Delete it
-    Vector3 pos = position;
-
-    //printf("%f %f %f\n", cameraPos.coords[0], cameraPos.coords[1], cameraPos.coords[2]);
-
-    GLfloat positionF[4] = { pos.coords[0], pos.coords[1], pos.coords[2], 1.0 };
-    mapping.glLightfv(GL_LIGHT0, GL_POSITION, positionF);
-    SetUniformFloat3(currentShader->first, "lightPosition", pos.coords[0], pos.coords[1], pos.coords[2]);
-
-    GLfloat diffuseF[4] = { color.coords[0], color.coords[1], color.coords[2], radius };
-    mapping.glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseF);
-
-    GLfloat specular[3] = { 1, 1, 1 };
-    mapping.glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
-
-    mapping.glEnable(GL_LIGHT0);
-    */
-  }
-
-
   // textures
 
   // Pick the GL pixel format that matches the byte layout of an SDL surface.
@@ -1692,11 +1455,6 @@ struct GLfunctions {
     }
   }
 
-  void OpenGLRenderer3D::SetClientTextureUnit(int textureUnit) {
-    //assert(glClientActiveTexture);
-    mapping.glClientActiveTexture(GL_TEXTURE0 + (GLuint)textureUnit);
-  }
-
   void OpenGLRenderer3D::SetMaxAnisotropy() {
 //#ifndef __gl_glcorearb_h_  // Can be used to check for Core Profile Mode on Linux
     mapping.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
@@ -1796,14 +1554,6 @@ struct GLfunctions {
 
   void OpenGLRenderer3D::SetFOV(float angle) {
     FOV = angle;
-  }
-
-  void OpenGLRenderer3D::PushAttribute(int attr) {
-    mapping.glPushAttrib((GLbitfield)attr);
-  }
-
-  void OpenGLRenderer3D::PopAttribute() {
-    mapping.glPopAttrib();
   }
 
   void OpenGLRenderer3D::SetViewport(int x, int y, int width, int height) {
@@ -2228,32 +1978,6 @@ struct GLfunctions {
     //mapping.glUniformMatrix4fv(location, 1, false, (float*)mat.GetTransposed().elements);
     mapping.glUniformMatrix4fv(location, 1, true, (float*)mat.elements); // true == transposed
   }
-
-  void OpenGLRenderer3D::HDRCaptureOverallBrightness() {
-    float brightness = 0.0;
-    int count = 0;
-    for (int i = 0; i < 2; i++) {
-//    for (int x = context_width * 0.2; x <= context_width * 0.8; x += context_width * 0.01) {
-//      for (int y = context_height * 0.2; y <= context_height * 0.8; y += context_height * 0.01) {
-      int x = random(context_width * 0.2f, context_width * 0.8f);
-      int y = random(context_height * 0.2f, context_height * 0.8f);
-      GLubyte pixel[3];
-      mapping.glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, (void*)pixel);
-      brightness += (pixel[0] + pixel[1] + pixel[2]) / 3.0f;
-      count++;
-    }
-    brightness /= (float)count;
-    //brightness /= 256.0;
-
-    overallBrightness = overallBrightness * 0.99f + brightness * 0.01f;
-
-    //printf("overall brightness: %f (%f)\n", overallBrightness, brightness);
-  }
-
-  float OpenGLRenderer3D::HDRGetOverallBrightness() {
-    return overallBrightness;
-  }
-
 
   // thread main loop
 
