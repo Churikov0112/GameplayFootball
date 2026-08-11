@@ -28,7 +28,15 @@ const float walkSprintSwitch = 6.0f;
 // PES6 digital control mode, quantizes some input to x degree angles
 const bool quantizeDirection = true;
 
-const float analogStickDeadzone = 0.75f;
+const float analogStickDeadzone = 0.3f;
+
+// gamepad layout presets (which face button does what). PES6 style is the default.
+enum e_ControllerLayout {
+  e_ControllerLayout_PES,
+  e_ControllerLayout_FIFA
+};
+const e_ControllerLayout defaultControllerLayout = e_ControllerLayout_PES;
+const bool defaultControllerSimpleMode = false; // reserved: simple mode for sticks-less gamepads is a future feature (see docs/wiki/открытые-вопросы.md)
 
 const float _default_CameraZoom = 0.5f;
 const float _default_CameraHeight = 0.3f;
