@@ -12,6 +12,10 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
 
 - Modern build: CMake 3.16+, C++17, a single static `blunted2` engine library, `sources.cmake` removed.
 - SDL2 → SDL3 (SDL3_image/SDL3_ttf; SDL_gfx dropped).
+- Renderer migrated to **OpenGL 3.2 core profile**: legacy fixed-function pipeline
+  (`glBegin`/`glEnd`, `glLightfv`, matrix stack) removed; rendering runs through the shader
+  pipeline (`#version 150`, VAO/VBO). This is a prerequisite for future OpenGL ES
+  (mobile) support.
 - Builds on Windows (MSVC + vcpkg), Linux (gcc), macOS (build-only — the game does not run there yet,
   rendering must happen on the main thread).
 - Determinism tooling: `tools/determinism` runs the match headless and fingerprints the simulation
