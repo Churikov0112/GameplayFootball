@@ -31,6 +31,7 @@ struct SideSelection {
   SDL_JoystickID joystickID; // stable device key, 0 for keyboard
   Gui2Image *controllerImage;
   int side; // -1, 0, 1
+  bool confirmed = false; // device confirmed its side on the controller select screen
 };
 
 // todo: just load match-, team-, and playerdata before starting match
@@ -64,6 +65,7 @@ class MenuTask : public Gui2Task {
 
     void SetControllerSetup(const std::vector<SideSelection> &sides) { queuedFixture.Lock(); queuedFixture->sides = sides; queuedFixture.Unlock(); }
     const std::vector<SideSelection> GetControllerSetup() { return queuedFixture.GetData().sides; }
+    void ClearControllerSetup() { queuedFixture.Lock(); queuedFixture->sides.clear(); queuedFixture.Unlock(); }
     void SetTeamIDs(const std::string &id1, const std::string &id2) { queuedFixture.Lock(); queuedFixture->teamID1 = id1; queuedFixture->teamID2 = id2; queuedFixture.Unlock(); }
     int GetTeamID(int whichOne) { if (whichOne == 0) return atoi(queuedFixture.GetData().teamID1.c_str()); else return atoi(queuedFixture.GetData().teamID2.c_str()); }
     int GetTeamKitNum(int teamID) { if (teamID == 0) return queuedFixture.GetData().team1KitNum; else return queuedFixture.GetData().team2KitNum; }

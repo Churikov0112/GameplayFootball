@@ -171,8 +171,9 @@ namespace blunted {
         // needs windowing event?
         Vector3 stick1Direction = Vector3(axes[0], axes[1], 0);
         // digital cross adds to stick for menu navigation (semantic dpad buttons)
-        if (UserEventManager::GetInstance().GetJoyButtonState(j, SDL_GAMEPAD_BUTTON_DPAD_UP))    stick1Direction.coords[1] += 1.0f;
-        if (UserEventManager::GetInstance().GetJoyButtonState(j, SDL_GAMEPAD_BUTTON_DPAD_DOWN))  stick1Direction.coords[1] -= 1.0f;
+        // note: axis LEFTY is positive pointing down, so dpad must match that sign
+        if (UserEventManager::GetInstance().GetJoyButtonState(j, SDL_GAMEPAD_BUTTON_DPAD_UP))    stick1Direction.coords[1] -= 1.0f;
+        if (UserEventManager::GetInstance().GetJoyButtonState(j, SDL_GAMEPAD_BUTTON_DPAD_DOWN))  stick1Direction.coords[1] += 1.0f;
         if (UserEventManager::GetInstance().GetJoyButtonState(j, SDL_GAMEPAD_BUTTON_DPAD_LEFT))  stick1Direction.coords[0] -= 1.0f;
         if (UserEventManager::GetInstance().GetJoyButtonState(j, SDL_GAMEPAD_BUTTON_DPAD_RIGHT)) stick1Direction.coords[0] += 1.0f;
         if (j == GetActiveJoystickID() && stick1Direction.GetLength() != 0) {

@@ -86,6 +86,9 @@ void OutroPage::ProcessKeyboardEvent(KeyboardEvent *event) {
 
 
 MainMenuPage::MainMenuPage(Gui2WindowManager *windowManager, const Gui2PageData &pageData) : Gui2Page(windowManager, pageData) {
+  // entering the main menu resets the queued side selection (a fresh match starts clean)
+  GetMenuTask()->ClearControllerSetup();
+
   Gui2Image *title = new Gui2Image(windowManager, "image_main_title", 28, 32, 44, 20);
   title->LoadImage("media/menu/main/title01.png");
 

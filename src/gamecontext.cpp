@@ -280,10 +280,11 @@ void RefreshGamepads() {
     controllers.push_back(new HIDGamepad(j));
   }
   // if an existing gamepad changed slot, re-map it (recreate to keep gamepadID == slot)
+  // note: controllers[0] is the keyboard, so controllers[i] holds gamepad slot i-1
   for (unsigned int i = 1; i < controllers.size(); i++) {
     HIDGamepad *pad = static_cast<HIDGamepad*>(controllers.at(i));
     int slot = UserEventManager::GetInstance().GetSlotForJoystickID(pad->GetJoystickID());
-    if (slot != (signed int)i) {
+    if (slot != (signed int)(i - 1)) {
       // slot changed: recreate so gamepadID matches slot
       delete controllers.at(i);
       controllers.at(i) = new HIDGamepad(slot);

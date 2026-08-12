@@ -11,6 +11,7 @@
 #include "utils/gui2/widgets/root.hpp"
 #include "utils/gui2/widgets/grid.hpp"
 #include "utils/gui2/widgets/button.hpp"
+#include "utils/gui2/widgets/caption.hpp"
 #include "utils/gui2/widgets/image.hpp"
 
 #include "hid/gamepad.hpp"
@@ -27,6 +28,9 @@ class ControllerSelectPage : public Gui2Page {
 
     void SetImagePositions();
     void ToggleLayout(int controllerID);
+    void SetConfirmed(int controllerID, bool confirmed);
+    void CheckAllConfirmed();
+    void ExitControllerSelectPage();
 
     virtual void Process();
     virtual void ProcessKeyboardEvent(KeyboardEvent *event);
@@ -38,7 +42,8 @@ class ControllerSelectPage : public Gui2Page {
     std::vector<unsigned long> delay;
     bool inGame;
 
-    Gui2Button *layoutToggle[_JOYSTICK_MAX];
+    Gui2Caption *layoutCaption[_JOYSTICK_MAX];
+    Gui2Image *confirmIcon[_JOYSTICK_MAX];
 
 };
 

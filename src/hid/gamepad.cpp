@@ -42,8 +42,8 @@ static const std::vector<e_ControllerButton>& GetPresetFunctionMapping(e_Control
     e_ControllerButton_L2, // Special
     e_ControllerButton_R1, // Sprint
     e_ControllerButton_R2, // Dribble
-    e_ControllerButton_Start, // Start
-    e_ControllerButton_Select // Select
+    e_ControllerButton_Select, // Select
+    e_ControllerButton_Start  // Start
   };
   static const std::vector<e_ControllerButton> fifaPreset = {
     e_ControllerButton_Up, e_ControllerButton_Right, e_ControllerButton_Down, e_ControllerButton_Left,
@@ -59,8 +59,8 @@ static const std::vector<e_ControllerButton>& GetPresetFunctionMapping(e_Control
     e_ControllerButton_L2, // Special
     e_ControllerButton_R1, // Sprint
     e_ControllerButton_R2, // Dribble
-    e_ControllerButton_Start,
-    e_ControllerButton_Select
+    e_ControllerButton_Select, // Select
+    e_ControllerButton_Start  // Start
   };
   return (layout == e_ControllerLayout_FIFA) ? fifaPreset : pesPreset;
 }
