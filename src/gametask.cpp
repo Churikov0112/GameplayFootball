@@ -128,7 +128,13 @@ void GameTask::GetPhase() {
 
 void GameTask::ProcessPhase() {
 
-  RefreshGamepads();
+  bool gamepadsChanged = RefreshGamepads();
+
+  // if a gamepad was plugged/unplugged, re-bind human gamers so the match never
+  // reads a destroyed HIDGamepad (RefreshGamepads deletes missing devices)
+  if (gamepadsChanged && match) {
+    match->UpdateControllerSetup();
+  }
 
   // if a human gamepad was unplugged mid-match: pause and open controller select on top
   if (match) {
@@ -147,12 +153,28 @@ void GameTask::ProcessPhase() {
         }
         if (!found) { anyGamerDeviceMissing = true; break; }
       }
-      if (anyGamerDeviceMissing) {
-        // pause and open pause menu with controller select on top
-        GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage((int)e_PageID_Ingame, Properties(), 0);
+      // only open the window if it is not already on top of the page stack
+      bool controllerSelectOpen = false;
+      const std::vector<Gui2PageData> &pageStack = GetMenuTask()->GetWindowManager()->GetPagePath()->GetPath();
+      if (!pageStack.empty() && pageStack.back().pageID == e_PageID_ControllerSelect) controllerSelectOpen = true;
+      if (anyGamerDeviceMissing && !controllerSelectOpen) {
+        // pause the match (unless it is already paused) and show controller
+        // select on top. If we paused it ourselves, mark resumeOnClose so the
+        // window can resume the match when it closes.
+        bool wasPaused = match->GetPause();
+        if (!wasPaused) match->Pause(true);
         Properties csProps;
         csProps.SetBool("isInGame", true);
-        GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage((int)e_PageID_ControllerSelect, csProps, 0);
+        csProps.SetBool("resumeOnClose", !wasPaused);
+        // open through the top page (Gui2Page::CreatePage) so the current page
+        // is properly replaced in the stack; opening via the page factory
+        // directly would leave the previous page in the root and leak it.
+        Gui2Page *topPage = GetMenuTask()->GetWindowManager()->GetPageFactory()->GetMostRecentlyCreatedPage();
+        if (topPage) {
+          topPage->CreatePage((int)e_PageID_ControllerSelect, csProps, 0);
+        } else {
+          GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage((int)e_PageID_ControllerSelect, csProps, 0);
+        }
       }
     }
   }

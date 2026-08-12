@@ -31,6 +31,7 @@ class ControllerSelectPage : public Gui2Page {
     void SetConfirmed(int controllerID, bool confirmed);
     void CheckAllConfirmed();
     void ExitControllerSelectPage();
+    void BuildDeviceViews(const std::vector<SideSelection> &savedSides);
 
     virtual void Process();
     virtual void ProcessKeyboardEvent(KeyboardEvent *event);
@@ -41,9 +42,11 @@ class ControllerSelectPage : public Gui2Page {
     std::vector<SideSelection> sides;
     std::vector<unsigned long> delay;
     bool inGame;
+    bool resumeOnClose = false; // resume the paused match when this window closes (opened from the match, not from the pause menu)
 
     Gui2Caption *layoutCaption[_JOYSTICK_MAX];
     Gui2Image *confirmIcon[_JOYSTICK_MAX];
+    std::vector<Gui2View*> deviceViews; // device rows created by BuildDeviceViews (controller images, layout labels, confirm icons)
 
 };
 

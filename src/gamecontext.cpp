@@ -259,8 +259,9 @@ bool InitGameContext(Properties &cfg) {
   return true;
 }
 
-void RefreshGamepads() {
+bool RefreshGamepads() {
   // called from the game thread (GameTask::ProcessPhase)
+  bool changed = false;
   int count = UserEventManager::GetInstance().GetJoystickCount();
   // remove gamepads that are gone
   for (int i = (int)controllers.size() - 1; i >= 1; i--) {
@@ -272,12 +273,14 @@ void RefreshGamepads() {
     if (!stillThere) {
       delete controllers.at(i);
       controllers.erase(controllers.begin() + i);
+      changed = true;
     }
   }
   // add newly connected gamepads (keep ordering by slot)
   int existing = (int)controllers.size() - 1;
   for (int j = existing; j < count; j++) {
     controllers.push_back(new HIDGamepad(j));
+    changed = true;
   }
   // if an existing gamepad changed slot, re-map it (recreate to keep gamepadID == slot)
   // note: controllers[0] is the keyboard, so controllers[i] holds gamepad slot i-1
@@ -288,8 +291,10 @@ void RefreshGamepads() {
       // slot changed: recreate so gamepadID matches slot
       delete controllers.at(i);
       controllers.at(i) = new HIDGamepad(slot);
+      changed = true;
     }
   }
+  return changed;
 }
 
 void ShutdownGameContext() {

@@ -90,7 +90,7 @@ int PredictFrameTimeToGo_ms(int frameCount);
 
 const std::vector<IHIDevice*> &GetControllers();
 
-void RefreshGamepads(); // rescan connected gamepads into 'controllers' (game thread)
+bool RefreshGamepads(); // rescan connected gamepads into 'controllers' (game thread); returns true if the set changed
 
 int main(int argc, char** argv);
 

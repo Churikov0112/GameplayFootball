@@ -20,6 +20,7 @@ using namespace blunted;
 ControllerSelectPage::ControllerSelectPage(Gui2WindowManager *windowManager, const Gui2PageData &pageData) : Gui2Page(windowManager, pageData) {
 
   inGame = pageData.properties->GetBool("isInGame");
+  resumeOnClose = pageData.properties->GetBool("resumeOnClose");
 
   Gui2Image *bg1 = new Gui2Image(windowManager, "image_gameover_bg", 10, 15, 80, 70);
   this->AddView(bg1);
@@ -39,64 +40,7 @@ ControllerSelectPage::ControllerSelectPage(Gui2WindowManager *windowManager, con
 
   this->SetFocus();
 
-  const std::vector<IHIDevice*> &controllers = GetControllers();
-  std::vector<SideSelection> savedSides;
-  if (inGame) {
-    sides = GetMenuTask()->GetControllerSetup();
-    assert(sides.size() == controllers.size());
-  } else {
-    // restore previously chosen sides when re-entering this page (e.g. going
-    // back from team select); confirmations are never kept
-    savedSides = GetMenuTask()->GetControllerSetup();
-  }
-  for (unsigned int i = 0; i < controllers.size(); i++) {
-    SideSelection side;
-    side.controllerID = i;
-    side.joystickID = (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) ?
-                      static_cast<HIDGamepad*>(controllers.at(i))->GetJoystickID() : 0;
-    if (inGame) {
-      side.side = sides.at(i).side;
-    } else if (savedSides.size() == controllers.size()) {
-      side.side = savedSides.at(i).side;
-    } else {
-      side.side = 0;
-      if (i == 0 && controllers.size() < 2) side.side = -1; // autoselect 1st player == team 0 (side -1)
-      else if (i == 1) side.side = -1; // if more than 1 controller, we're likely to have a gamepad on id > 0, so pick this one as auto p1 instead
-    }
-    side.confirmed = false;
-    side.controllerImage = new Gui2Image(windowManager, "image_controller" + int_to_str(i), 0, 0, 14, 10);
-    this->AddView(side.controllerImage);
-    if (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) {
-      side.controllerImage->LoadImage("media/menu/controller/controller_small.png");
-    } else {
-      side.controllerImage->LoadImage("media/menu/controller/keyboard_small.png");
-    }
-    side.controllerImage->Show();
-    if (!inGame) sides.push_back(side); else sides.at(i) = side;
-    delay.push_back(0);
-
-    layoutCaption[i] = 0;
-    confirmIcon[i] = 0;
-    if (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) {
-      HIDGamepad *gamepad = static_cast<HIDGamepad*>(controllers.at(i));
-      std::string layoutStr = (gamepad->GetLayout() == e_ControllerLayout_PES) ? "PES" : "FIFA";
-      layoutCaption[i] = new Gui2Caption(windowManager, "caption_controllerselect_layout" + int_to_str(i), 0, 0, 12, 3, "layout: " + layoutStr);
-      layoutCaption[i]->SetPosition(43 + side.side * 25, 30 + i * 15); // below the controller image row
-      this->AddView(layoutCaption[i]);
-      layoutCaption[i]->Show();
-
-      confirmIcon[i] = new Gui2Image(windowManager, "image_controllerselect_confirm" + int_to_str(i), 0, 0, 3, 3);
-      confirmIcon[i]->SetPosition(43 + side.side * 25 + 9, 20 + i * 15 - 3); // on top of the icon, next to the controller image
-      this->AddView(confirmIcon[i]);
-      confirmIcon[i]->Hide();
-    } else {
-      // keyboard also has a confirm indicator (drawn later on confirm)
-      confirmIcon[i] = new Gui2Image(windowManager, "image_controllerselect_confirm" + int_to_str(i), 0, 0, 3, 3);
-      confirmIcon[i]->SetPosition(50, 17 + i * 15);
-      this->AddView(confirmIcon[i]);
-      confirmIcon[i]->Hide();
-    }
-  }
+  BuildDeviceViews(GetMenuTask()->GetControllerSetup());
 
   SetImagePositions();
 
@@ -104,6 +48,77 @@ ControllerSelectPage::ControllerSelectPage(Gui2WindowManager *windowManager, con
 }
 
 ControllerSelectPage::~ControllerSelectPage() {
+}
+
+void ControllerSelectPage::BuildDeviceViews(const std::vector<SideSelection> &savedSides) {
+  // copy before sides.clear() below: savedSides may reference the same vector
+  // (Process() passes this->sides), and clearing it would drop all chosen sides
+  std::vector<SideSelection> savedSidesCopy = savedSides;
+
+  // remove previously created device rows (if any)
+  for (unsigned int i = 0; i < deviceViews.size(); i++) {
+    deviceViews.at(i)->Exit();
+    delete deviceViews.at(i);
+  }
+  deviceViews.clear();
+  sides.clear();
+  delay.clear();
+  for (int i = 0; i < _JOYSTICK_MAX; i++) {
+    layoutCaption[i] = 0;
+    confirmIcon[i] = 0;
+  }
+
+  const std::vector<IHIDevice*> &controllers = GetControllers();
+  for (unsigned int i = 0; i < controllers.size(); i++) {
+    SideSelection side;
+    side.controllerID = i;
+    side.joystickID = (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) ?
+                      static_cast<HIDGamepad*>(controllers.at(i))->GetJoystickID() : 0;
+    side.side = 0;
+    // restore side for devices still connected (match by joystickID; keyboard == 0)
+    for (unsigned int s = 0; s < savedSidesCopy.size(); s++) {
+      if (savedSidesCopy.at(s).joystickID == side.joystickID) { side.side = savedSidesCopy.at(s).side; break; }
+    }
+    if (!inGame && savedSidesCopy.size() == 0) {
+      if (i == 0 && controllers.size() < 2) side.side = -1; // autoselect 1st player == team 0 (side -1)
+      else if (i == 1) side.side = -1; // if more than 1 controller, we're likely to have a gamepad on id > 0, so pick this one as auto p1 instead
+    }
+    side.confirmed = false;
+    side.controllerImage = new Gui2Image(windowManager, "image_controller" + int_to_str(i), 0, 0, 14, 10);
+    this->AddView(side.controllerImage);
+    deviceViews.push_back(side.controllerImage);
+    if (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) {
+      side.controllerImage->LoadImage("media/menu/controller/controller_small.png");
+    } else {
+      side.controllerImage->LoadImage("media/menu/controller/keyboard_small.png");
+    }
+    side.controllerImage->Show();
+    sides.push_back(side);
+    delay.push_back(0);
+
+    if (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) {
+      HIDGamepad *gamepad = static_cast<HIDGamepad*>(controllers.at(i));
+      std::string layoutStr = (gamepad->GetLayout() == e_ControllerLayout_PES) ? "PES" : "FIFA";
+      layoutCaption[i] = new Gui2Caption(windowManager, "caption_controllerselect_layout" + int_to_str(i), 0, 0, 12, 3, "layout: " + layoutStr);
+      layoutCaption[i]->SetPosition(43 + side.side * 25, 30 + i * 15); // below the controller image row
+      this->AddView(layoutCaption[i]);
+      deviceViews.push_back(layoutCaption[i]);
+      layoutCaption[i]->Show();
+
+      confirmIcon[i] = new Gui2Image(windowManager, "image_controllerselect_confirm" + int_to_str(i), 0, 0, 3, 3);
+      confirmIcon[i]->SetPosition(43 + side.side * 25 + 9, 20 + i * 15 - 3); // on top of the icon, next to the controller image
+      this->AddView(confirmIcon[i]);
+      deviceViews.push_back(confirmIcon[i]);
+      confirmIcon[i]->Hide();
+    } else {
+      // keyboard also has a confirm indicator (drawn later on confirm)
+      confirmIcon[i] = new Gui2Image(windowManager, "image_controllerselect_confirm" + int_to_str(i), 0, 0, 3, 3);
+      confirmIcon[i]->SetPosition(50, 17 + i * 15);
+      this->AddView(confirmIcon[i]);
+      deviceViews.push_back(confirmIcon[i]);
+      confirmIcon[i]->Hide();
+    }
+  }
 }
 
 void ControllerSelectPage::SetImagePositions() {
@@ -172,12 +187,21 @@ void ControllerSelectPage::CheckAllConfirmed() {
     CreatePage(e_PageID_TeamSelect);
   } else {
     GetGameTask()->GetMatch()->UpdateControllerSetup();
+    if (resumeOnClose) GetGameTask()->GetMatch()->Pause(false); // resume the match we paused on unplug
     GoBack();
   }
 }
 
 void ControllerSelectPage::Process() {
   Gui2View::Process();
+
+  // hot-plug: if the device set changed while this window is open, rebuild the
+  // device rows in place. Recreating the page (CreatePage) would push stale
+  // entries onto the page path and break GoBack, so we rebuild contents instead.
+  if (sides.size() != GetControllers().size()) {
+    BuildDeviceViews(sides);
+    SetImagePositions();
+  }
 }
 
 void ControllerSelectPage::ProcessKeyboardEvent(KeyboardEvent *event) {
@@ -266,6 +290,7 @@ void ControllerSelectPage::ExitControllerSelectPage() {
   GetMenuTask()->SetControllerSetup(sides);
   if (inGame) {
     GetGameTask()->GetMatch()->UpdateControllerSetup();
+    if (resumeOnClose) GetGameTask()->GetMatch()->Pause(false); // resume the match we paused on unplug
   }
   GoBack();
 }
