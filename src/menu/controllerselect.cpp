@@ -196,11 +196,7 @@ void ControllerSelectPage::ProcessKeyboardEvent(KeyboardEvent *event) {
     CheckAllConfirmed();
     return;
   }
-  // A unconfirms the keyboard (only), Esc is a two-step back: unconfirm first, then leave
-  if (event->GetKeyOnce(SDLK_A)) {
-    if (sides.at(0).confirmed) SetConfirmed(0, false);
-    return;
-  }
+  // Esc is a two-step back: unconfirm first, then leave
   if (event->GetKeyOnce(SDLK_ESCAPE)) {
     if (sides.at(0).confirmed) {
       SetConfirmed(0, false);
