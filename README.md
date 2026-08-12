@@ -16,8 +16,8 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
   (`glBegin`/`glEnd`, `glLightfv`, matrix stack) removed; rendering runs through the shader
   pipeline (`#version 150`, VAO/VBO). This is a prerequisite for future OpenGL ES
   (mobile) support.
-- Builds on Windows (MSVC + vcpkg), Linux (gcc). macOS builds; a fix that moves rendering to the
-  main thread (required by AppKit) is in place but not yet verified on device — see `docs/wiki/открытые-вопросы.md`.
+- Builds and runs on Windows (MSVC + vcpkg), Linux (gcc) and macOS (verified on MacBook Air M2,
+  2026-08-13; rendering runs on the main thread as AppKit requires, the scheduler on a helper thread).
 - **Gamepad input reworked** (SDL3 `SDL_Gamepad`): semantic `SDL_GAMEPAD_BUTTON_*`/`AXIS_*` indices
   instead of raw joystick numbers (this fixes Xbox Series and any modern controller), PES/FIFA layout
   presets switched on the controller-select screen (LB/RB), menu navigation from stick and D-pad,
@@ -53,12 +53,11 @@ cd build
 ./gameplayfootball
 ```
 
-### macOS (build — device run pending)
+### macOS
 
-**Status**: the game compiles on macOS. Window/GL-context creation and the SDL event pump now live on
-the main thread (required by AppKit); this was the blocker, and the fix is in but not yet verified on
-a Mac (see `docs/wiki/открытые-вопросы.md`). Build with a single job on low-RAM machines
-(`cmake --build build --parallel 1`).
+**Status**: verified on MacBook Air M2 (2026-08-13) — window, menu, match, textures and UI render,
+clean exit. Window/GL-context creation and the SDL event pump live on the main thread (required by
+AppKit); on low-RAM machines build with a single job (`cmake --build build --parallel 1`).
 
 ```bash
 # Install dependencies (requires brew)
