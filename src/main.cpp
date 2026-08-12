@@ -133,6 +133,21 @@ class ThreadHudThread : public Thread {  public:
 };
 
 
+#ifdef __APPLE__
+// macOS (Cocoa/AppKit) requires window creation, the GL context and SDL event
+// pumping on the main thread. So on Apple platforms the scheduler (game +
+// graphics phases) runs on a helper thread while the render loop takes the
+// main thread; when the scheduler is done it signals the render loop to stop.
+void RunSchedulerThenStopRenderer() {
+  Run(); // scheduler, until quit
+
+  // stop the render loop that is running on the main thread
+  boost::intrusive_ptr<Message_Shutdown> shutdown(new Message_Shutdown());
+  graphicsSystem->GetRenderer3D()->messageQueue.PushMessage(shutdown);
+}
+#endif
+
+
 int main(int argc, char** argv) {
 
   config = new Properties();
@@ -224,7 +239,15 @@ int main(int argc, char** argv) {
 
   // fire!
 
+#ifdef __APPLE__
+  // macOS: host the render loop on the main thread (window/GL/events must
+  // live there) and run the scheduler on a helper thread.
+  boost::thread schedulerThread(&RunSchedulerThenStopRenderer);
+  graphicsSystem->GetRenderer3D()->operator()();
+  schedulerThread.join();
+#else
   Run();
+#endif
 
 
   // exit

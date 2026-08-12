@@ -38,13 +38,24 @@ namespace blunted {
     height = config.GetInt("context_y", 720);
     bpp = config.GetInt("context_bpp", 32);
     bool fullscreen = config.GetBool("context_fullscreen", false);
+
+#ifdef __APPLE__
+    // macOS (Cocoa/AppKit): window creation, the GL context and SDL event
+    // pumping are all required on the main thread. Do not start a renderer
+    // thread here; create the context synchronously on the current (main)
+    // thread and let main() host the render loop on the main thread (see
+    // src/main.cpp). Other platforms keep the dedicated renderer thread.
+    bool createSuccess = renderer3DTask->CreateContext(width, height, bpp, fullscreen);
+#else
     renderer3DTask->Run();
 
     boost::intrusive_ptr<Renderer3DMessage_CreateContext> createContext(new Renderer3DMessage_CreateContext(width, height, bpp, fullscreen));
     renderer3DTask->messageQueue.PushMessage(createContext);
     createContext->Wait();
+    bool createSuccess = createContext->success;
+#endif
 
-    if (!createContext->success) {
+    if (!createSuccess) {
       Log(e_FatalError, "GraphicsSystem", "Initialize", "Could not create context");
     } else {
       Log(e_Notice, "GraphicsSystem", "Initialize", "Created context, resolution " + int_to_str(width) + " * " + int_to_str(height) + " @ " + int_to_str(bpp) + " bpp");
@@ -68,11 +79,17 @@ namespace blunted {
     vertexBufferResourceManager.reset();
 
     // shutdown renderer thread
+#ifdef __APPLE__
+    // macOS: there is no renderer thread — the render loop runs on the main
+    // thread (see src/main.cpp) and was already stopped there, before
+    // GraphicsSystem::Exit is reached. Nothing to shut down here.
+#else
     boost::intrusive_ptr<Message_Shutdown> R3Dshutdown(new Message_Shutdown());
     renderer3DTask->messageQueue.PushMessage(R3Dshutdown);
     R3Dshutdown->Wait();
 
     renderer3DTask->Join();
+#endif
     delete renderer3DTask;
     renderer3DTask = NULL;
   }

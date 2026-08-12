@@ -16,8 +16,8 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
   (`glBegin`/`glEnd`, `glLightfv`, matrix stack) removed; rendering runs through the shader
   pipeline (`#version 150`, VAO/VBO). This is a prerequisite for future OpenGL ES
   (mobile) support.
-- Builds on Windows (MSVC + vcpkg), Linux (gcc), macOS (build-only — the game does not run there yet,
-  rendering must happen on the main thread).
+- Builds on Windows (MSVC + vcpkg), Linux (gcc). macOS builds; a fix that moves rendering to the
+  main thread (required by AppKit) is in place but not yet verified on device — see `docs/wiki/открытые-вопросы.md`.
 - **Gamepad input reworked** (SDL3 `SDL_Gamepad`): semantic `SDL_GAMEPAD_BUTTON_*`/`AXIS_*` indices
   instead of raw joystick numbers (this fixes Xbox Series and any modern controller), PES/FIFA layout
   presets switched on the controller-select screen (LB/RB), menu navigation from stick and D-pad,
@@ -53,10 +53,12 @@ cd build
 ./gameplayfootball
 ```
 
-### macOS (build only — the game does not run yet)
+### macOS (build — device run pending)
 
-**Important**: the game compiles on macOS, but does not run yet, because rendering must happen on
-the main thread (see `docs/wiki/открытые-вопросы.md`).
+**Status**: the game compiles on macOS. Window/GL-context creation and the SDL event pump now live on
+the main thread (required by AppKit); this was the blocker, and the fix is in but not yet verified on
+a Mac (see `docs/wiki/открытые-вопросы.md`). Build with a single job on low-RAM machines
+(`cmake --build build --parallel 1`).
 
 ```bash
 # Install dependencies (requires brew)
@@ -66,7 +68,13 @@ brew install git cmake sdl3 sdl3_image sdl3_ttf boost openal-soft
 git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)"
-cmake --build build --parallel
+cmake --build build --parallel 1
+
+# Copy the data next to the binary, then run from the build directory
+# (the game uses relative data paths)
+cp -R data/. build/
+cd build
+./gameplayfootball
 ```
 
 ### Windows
