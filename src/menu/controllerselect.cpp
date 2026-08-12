@@ -99,21 +99,21 @@ void ControllerSelectPage::BuildDeviceViews(const std::vector<SideSelection> &sa
     if (controllers.at(i)->GetDeviceType() == e_HIDeviceType_Gamepad) {
       HIDGamepad *gamepad = static_cast<HIDGamepad*>(controllers.at(i));
       std::string layoutStr = (gamepad->GetLayout() == e_ControllerLayout_PES) ? "PES" : "FIFA";
-      layoutCaption[i] = new Gui2Caption(windowManager, "caption_controllerselect_layout" + int_to_str(i), 0, 0, 12, 3, "layout: " + layoutStr);
-      layoutCaption[i]->SetPosition(43 + side.side * 25, 30 + i * 15); // below the controller image row
+      layoutCaption[i] = new Gui2Caption(windowManager, "caption_controllerselect_layout" + int_to_str(i), 0, 0, 12, 3, "LAYOUT: " + layoutStr);
+      layoutCaption[i]->SetPosition(43 + side.side * 25 + 7 - layoutCaption[i]->GetTextWidthPercent() * 0.5, 31 + i * 15); // centered under the controller image
       this->AddView(layoutCaption[i]);
       deviceViews.push_back(layoutCaption[i]);
       layoutCaption[i]->Show();
 
       confirmIcon[i] = new Gui2Image(windowManager, "image_controllerselect_confirm" + int_to_str(i), 0, 0, 3, 3);
-      confirmIcon[i]->SetPosition(43 + side.side * 25 + 9, 20 + i * 15 - 3); // on top of the icon, next to the controller image
+      confirmIcon[i]->SetPosition(43 + side.side * 25 + 5, 34 + i * 15); // under the layout label
       this->AddView(confirmIcon[i]);
       deviceViews.push_back(confirmIcon[i]);
       confirmIcon[i]->Hide();
     } else {
-      // keyboard also has a confirm indicator (drawn later on confirm)
+      // keyboard: confirm indicator centered under the keyboard image
       confirmIcon[i] = new Gui2Image(windowManager, "image_controllerselect_confirm" + int_to_str(i), 0, 0, 3, 3);
-      confirmIcon[i]->SetPosition(50, 17 + i * 15);
+      confirmIcon[i]->SetPosition(43 + side.side * 25 + 5, 31 + i * 15);
       this->AddView(confirmIcon[i]);
       deviceViews.push_back(confirmIcon[i]);
       confirmIcon[i]->Hide();
@@ -125,11 +125,14 @@ void ControllerSelectPage::SetImagePositions() {
   for (unsigned int i = 0; i < sides.size(); i++) {
     int x = 43 + sides.at(i).side * 25;
     sides.at(i).controllerImage->SetPosition(x, 20 + i * 15);
+    bool isGamepad = (GetControllers().at(i)->GetDeviceType() == e_HIDeviceType_Gamepad);
     if (layoutCaption[i]) {
-      layoutCaption[i]->SetPosition(x, 30 + i * 15); // move layout label together with the icon
+      // centered under the controller image
+      layoutCaption[i]->SetPosition(x + 7 - layoutCaption[i]->GetTextWidthPercent() * 0.5, 31 + i * 15);
     }
     if (confirmIcon[i]) {
-      confirmIcon[i]->SetPosition(x + 7, 17 + i * 15); // move confirm icon together with the icon
+      if (isGamepad) confirmIcon[i]->SetPosition(x + 5, 34 + i * 15); // under the layout label
+      else confirmIcon[i]->SetPosition(x + 5, 31 + i * 15);           // centered under the keyboard image
     }
   }
 }
@@ -139,7 +142,8 @@ void ControllerSelectPage::ToggleLayout(int controllerID) {
   e_ControllerLayout next = (gamepad->GetLayout() == e_ControllerLayout_PES) ? e_ControllerLayout_FIFA : e_ControllerLayout_PES;
   gamepad->SetLayout(next);
   std::string layoutStr = (gamepad->GetLayout() == e_ControllerLayout_PES) ? "PES" : "FIFA";
-  layoutCaption[controllerID]->SetCaption("layout: " + layoutStr);
+  layoutCaption[controllerID]->SetCaption("LAYOUT: " + layoutStr);
+  SetImagePositions();
 }
 
 void ControllerSelectPage::SetConfirmed(int controllerID, bool confirmed) {
@@ -153,8 +157,8 @@ void ControllerSelectPage::SetConfirmed(int controllerID, bool confirmed) {
     int h = int(round(img->GetSize().coords[1]));
     // clear
     img->DrawRectangle(0, 0, w, h, Vector3(0, 0, 0), 0);
-    // green circle
-    Vector3 green(0.0f, 200.0f, 0.0f); // 0..255 color space (see Image2D::DrawRectangle/DrawLine)
+    // green circle (filled disc)
+    Vector3 green(0.0f, 200.0f, 0.0f); // 0..255 color space (see Image2D::DrawRectangle)
     Vector3 white(255.0f, 255.0f, 255.0f);
     int cx = w / 2;
     int cy = h / 2;
@@ -167,13 +171,36 @@ void ControllerSelectPage::SetConfirmed(int controllerID, bool confirmed) {
         img->DrawRectangle(cx - halfW, y, halfW * 2, 1, green);
       }
     }
-    // white check mark (two strokes)
-    img->DrawLine(Line(Vector3(cx - r * 0.5, cy, 0), Vector3(cx - r * 0.15, cy + r * 0.4, 0)), white);
-    img->DrawLine(Line(Vector3(cx - r * 0.15, cy + r * 0.4, 0), Vector3(cx + r * 0.6, cy - r * 0.4, 0)), white);
+    // white check mark. sdl_line is a stub (SGE removed), so draw lines manually.
+    int x0 = cx - int(r * 0.5);
+    int y0 = cy;
+    int x1 = cx - int(r * 0.1);
+    int y1 = cy + int(r * 0.4);
+    int x2 = cx + int(r * 0.6);
+    int y2 = cy - int(r * 0.4);
+    DrawPixelLine(img, x0, y0, x1, y1, white);
+    DrawPixelLine(img, x1, y1, x2, y2, white);
     img->OnChange();
     icon->Show();
   } else {
     icon->Hide();
+  }
+}
+
+void ControllerSelectPage::DrawPixelLine(boost::intrusive_ptr<Image2D> img, int x0, int y0, int x1, int y1, const Vector3 &color) {
+  int dx = abs(x1 - x0);
+  int dy = -abs(y1 - y0);
+  int sx = x0 < x1 ? 1 : -1;
+  int sy = y0 < y1 ? 1 : -1;
+  int err = dx + dy;
+  while (true) {
+    img->PutPixel(x0, y0, color);
+    img->PutPixel(x0 + 1, y0, color);
+    img->PutPixel(x0, y0 + 1, color);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
   }
 }
 

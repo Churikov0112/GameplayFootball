@@ -29,6 +29,7 @@ class ControllerSelectPage : public Gui2Page {
     void SetImagePositions();
     void ToggleLayout(int controllerID);
     void SetConfirmed(int controllerID, bool confirmed);
+    void DrawPixelLine(boost::intrusive_ptr<Image2D> img, int x0, int y0, int x1, int y1, const Vector3 &color);
     void CheckAllConfirmed();
     void ExitControllerSelectPage();
     void BuildDeviceViews(const std::vector<SideSelection> &savedSides);

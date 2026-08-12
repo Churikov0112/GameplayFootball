@@ -48,12 +48,12 @@ static const std::vector<e_ControllerButton>& GetPresetFunctionMapping(e_Control
   static const std::vector<e_ControllerButton> fifaPreset = {
     e_ControllerButton_Up, e_ControllerButton_Right, e_ControllerButton_Down, e_ControllerButton_Left,
     e_ControllerButton_Y,  // LongPass
-    e_ControllerButton_B,  // HighPass
-    e_ControllerButton_X,  // ShortPass  (FIFA: X = pass)
-    e_ControllerButton_A,  // Shot       (FIFA: A = shot)
+    e_ControllerButton_X,  // HighPass  (FIFA: X = cross/lob)
+    e_ControllerButton_A,  // ShortPass (FIFA: A = ground pass)
+    e_ControllerButton_B,  // Shot      (FIFA: B = shoot)
     e_ControllerButton_Y,  // KeeperRush
-    e_ControllerButton_B,  // Sliding
-    e_ControllerButton_B,  // Pressure   (FIFA: B = standing tackle)
+    e_ControllerButton_B,  // Sliding   (FIFA: B = tackle in defence)
+    e_ControllerButton_B,  // Pressure  (FIFA: B = standing tackle)
     e_ControllerButton_X,  // TeamPressure
     e_ControllerButton_L1, // Switch
     e_ControllerButton_L2, // Special

@@ -18,6 +18,10 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
   (mobile) support.
 - Builds on Windows (MSVC + vcpkg), Linux (gcc), macOS (build-only — the game does not run there yet,
   rendering must happen on the main thread).
+- **Gamepad input reworked** (SDL3 `SDL_Gamepad`): semantic `SDL_GAMEPAD_BUTTON_*`/`AXIS_*` indices
+  instead of raw joystick numbers (this fixes Xbox Series and any modern controller), PES/FIFA layout
+  presets switched on the controller-select screen (LB/RB), menu navigation from stick and D-pad,
+  and hot-plug (plug/unplug mid-match pauses and opens controller select).
 - Determinism tooling: `tools/determinism` runs the match headless and fingerprints the simulation
   (SHA-1) to catch unintended gameplay changes. Platform references live in `tools/determinism/`.
 - Project documentation lives in the wiki: `docs/wiki/index.md`.
