@@ -42,7 +42,7 @@
 
 #include "../resources/texture.hpp"
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__APPLE__)
 #include <SDL3/SDL_opengl_glext.h>
 #endif
 
@@ -419,6 +419,9 @@ struct GLfunctions {
     mapping.glDisable(GL_MULTISAMPLE);
     mapping.glCullFace(GL_BACK);
 
+    // SDL surfaces may be tightly packed (e.g. 24-bit RGB with a row width not
+    // a multiple of 4); tell GL so glTexImage2D uploads don't read skewed rows.
+    mapping.glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     // shaders
 

@@ -9,8 +9,10 @@ This file provides guidance to agents working with code in this repository.
 и собран по изменениям Google Brain (ветка `google_brain`). Цель репозитория — собираться и запускаться на как
 можно большем числе платформ. Движок «Blunted2» лежит в репозитории (`src/base`, `src/types`, `src/scene`,
 `src/systems`, `src/managers`, `src/framework`); игра поверх него — `src/onthepitch`, `src/menu`, `src/league`, `src/data`.
-Windows: локально x86 (Win32). macOS: компилируется; рендер перенесён в main thread
-(фикс 2026-08-13), запуск на устройстве ещё не подтверждён — см. [[открытые-вопросы]].
+Windows: локально x86 (Win32). macOS: запускается (подтверждено 2026-08-13 на
+MacBook Air M2): окно/GL-контекст и прокачка событий в main thread, шедулер — в
+вспомогательном `boost::thread`. Известен визуальный дефект: поле и часть текстур
+чёрные — см. [[открытые-вопросы]].
 
 **Актуальная картина проекта живёт в вики: `docs/wiki/index.md` — начинать оттуда.** Этот файл
 несёт только то, что сломаешь, *не зная, где посмотреть*; предметные детали — в вики, а
@@ -83,8 +85,10 @@ cmake --build . --parallel --config Release
 :: запуск: gameplayfootball.exe внутри build\Release
 ```
 
-**macOS**: собирается через brew (sdl3 sdl3_image sdl3_ttf boost openal-soft), но **не запускается**
-(рендеринг обязан идти в main thread — см. `docs/wiki/открытые-вопросы`).
+**macOS**: собирается через brew (sdl3 sdl3_image sdl3_ttf boost openal-soft). Запускается
+(подтверждено 2026-08-13 на MacBook Air M2): окно/GL-контекст и прокачка событий в main
+thread, шедулер — во вспомогательном `boost::thread` (см. `src/main.cpp`). Известен
+визуальный дефект: поле и часть текстур чёрные — см. `docs/wiki/открытые-вопросы`.
 
 Проверка регрессии геймплея — вручную через `tools/determinism` (эталоны см.
 `docs/wiki/открытые-вопросы`). CI в GitHub нет.

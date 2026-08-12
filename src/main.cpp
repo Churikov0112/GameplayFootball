@@ -126,36 +126,22 @@ class ThreadHudThread : public Thread {  public:
         boost::this_thread::yield();
       }
     }
-
   protected:
     ThreadHud *hud;
 
 };
 
 
-#ifdef __APPLE__
-// macOS (Cocoa/AppKit) requires window creation, the GL context and SDL event
-// pumping on the main thread. So on Apple platforms the scheduler (game +
-// graphics phases) runs on a helper thread while the render loop takes the
-// main thread; when the scheduler is done it signals the render loop to stop.
-void RunSchedulerThenStopRenderer() {
-  Run(); // scheduler, until quit
+static ThreadHudThread *threadHudThread = 0;
+static TTF_Font *defaultFont = 0;
+static TTF_Font *defaultOutlineFont = 0;
 
-  // stop the render loop that is running on the main thread
-  boost::intrusive_ptr<Message_Shutdown> shutdown(new Message_Shutdown());
-  graphicsSystem->GetRenderer3D()->messageQueue.PushMessage(shutdown);
-}
-#endif
-
-
-int main(int argc, char** argv) {
-
-  config = new Properties();
-  if (argc > 1) configFile = argv[1];
-  config->LoadFile(configFile.c_str());
-
-  Initialize(*config);
-
+// Everything between the manager initialization and the scheduler run. On
+// Apple platforms this runs on a helper thread while the render loop takes
+// the main thread; everywhere else it runs on the main thread. On Apple the
+// graphics/audio systems were already created on the main thread by
+// InitGameSystems() (called from main()), so InitGameContext() skips them.
+void RunGame() {
   srand(time(NULL));
   rand(); // mingw32? buggy compiler? first value seems bogus
   randomseed(); // for the boost random
@@ -168,13 +154,13 @@ int main(int argc, char** argv) {
 
   if (!InitGameContext(*config)) {
     Log(e_FatalError, "football", "main", "Could not initialize game context");
-    return 1;
+    return;
   }
 
   if (SuperDebug()) InitDebugImage();
   if (GetDebugMode() == e_DebugMode_AI) InitDebugOverlay();
 
-  ThreadHudThread *threadHudThread = 0;
+  threadHudThread = 0;
   if (!IsReleaseVersion() && 1 == 2) {
     threadHudThread = new ThreadHudThread();
     threadHudThread->Run();
@@ -192,9 +178,9 @@ int main(int argc, char** argv) {
   // TTF_Font *defaultFont = TTF_OpenFont("media/fonts/archivonarrow/ArchivoNarrow-Regular.ttf", 28);
   // TTF_Font *defaultOutlineFont = TTF_OpenFont("media/fonts/archivonarrow/ArchivoNarrow-Regular.ttf", 28);
   std::string fontfilename = config->Get("font_filename", "media/fonts/alegreya/AlegreyaSansSC-ExtraBold.ttf");
-  TTF_Font *defaultFont = TTF_OpenFont(fontfilename.c_str(), 32);
+  defaultFont = TTF_OpenFont(fontfilename.c_str(), 32);
   if (!defaultFont) Log(e_FatalError, "football", "main", "Could not load font " + fontfilename);
-  TTF_Font *defaultOutlineFont = TTF_OpenFont(fontfilename.c_str(), 32);
+  defaultOutlineFont = TTF_OpenFont(fontfilename.c_str(), 32);
   TTF_SetFontOutline(defaultOutlineFont, 2);
   menuTask = boost::shared_ptr<MenuTask>(new MenuTask(5.0f / 4.0f, 0, defaultFont, defaultOutlineFont));
   if (controllers.size() > 1) menuTask->SetEventJoyButtons(static_cast<HIDGamepad*>(controllers.at(1))->GetControllerMapping(e_ControllerButton_A), static_cast<HIDGamepad*>(controllers.at(1))->GetControllerMapping(e_ControllerButton_B));
@@ -239,14 +225,41 @@ int main(int argc, char** argv) {
 
   // fire!
 
+  Run();
+
 #ifdef __APPLE__
-  // macOS: host the render loop on the main thread (window/GL/events must
-  // live there) and run the scheduler on a helper thread.
-  boost::thread schedulerThread(&RunSchedulerThenStopRenderer);
+  // macOS: the render loop lives on the main thread, so once the scheduler is
+  // done, signal it to stop (it will be joined back in main()).
+  boost::intrusive_ptr<Message_Shutdown> shutdown(new Message_Shutdown());
+  graphicsSystem->GetRenderer3D()->messageQueue.PushMessage(shutdown);
+#endif
+}
+
+
+int main(int argc, char** argv) {
+
+  config = new Properties();
+  if (argc > 1) configFile = argv[1];
+  config->LoadFile(configFile.c_str());
+
+  Initialize(*config);
+
+#ifdef __APPLE__
+  // macOS (Cocoa/AppKit) requires window creation, the GL context and SDL
+  // event pumping on the main thread. Create the systems (and thus the
+  // window/context) here, on the main thread, then run the whole game
+  // (context init + scheduler) on a helper thread while the render loop takes
+  // the main thread.
+  if (!InitGameSystems(*config)) {
+    Log(e_FatalError, "football", "main", "Could not initialize game systems");
+    return 1;
+  }
+
+  boost::thread schedulerThread(&RunGame);
   graphicsSystem->GetRenderer3D()->operator()();
   schedulerThread.join();
 #else
-  Run();
+  RunGame();
 #endif
 
 

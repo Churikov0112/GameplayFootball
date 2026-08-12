@@ -37,7 +37,7 @@ namespace blunted {
 
     // create power-of-2 version
     bool alpha = SDL_ISPIXELFORMAT_ALPHA(sdlText->format);
-    SDL_Surface *sdlTextPow2 = SDL_CreateSurface(pot(sdlText->w), pot(sdlText->h), SDL_PIXELFORMAT_RGBA8888);
+    SDL_Surface *sdlTextPow2 = SDL_CreateSurface(pot(sdlText->w), pot(sdlText->h), SDL_PIXELFORMAT_RGBA32);
 
     //printf("address old: %i\n", sdlTextPow2);
 

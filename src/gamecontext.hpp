@@ -12,6 +12,7 @@
 
 #include "main.hpp"
 
+bool InitGameSystems(Properties &config);
 bool InitGameContext(Properties &config);
 void ShutdownGameContext();
 

@@ -8,7 +8,11 @@
 namespace blunted {
 
   SDL_Surface *CreateSDLSurface(int width, int height) {
-    return SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA8888);
+    // SDL_PIXELFORMAT_RGBA32 is the byte order R,G,B,A in memory on
+    // little-endian platforms, which matches GL_RGBA. SDL_PIXELFORMAT_RGBA8888
+    // stores A,B,G,R there instead (GL_ABGR_EXT), which is rejected by the GL
+    // core profile on macOS.
+    return SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA32);
   }
 
   void sdl_putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel) {

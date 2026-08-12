@@ -170,3 +170,28 @@ FBO complete). GLES-перевод шейдеров (`#version 300 es`) — от
 пересобраны, эталоны детерминизма совпали (`372c4bbd...` и `a672aa0b...`). Запуск на устройстве
 (MacBook Air M2, сборка без параллелизма) не подтверждён — первый пункт роадмапа открыт до
 проверки на маке (docs/wiki/открытые-вопросы.md).
+## [2026-08-13] fix | macOS подтверждён на устройстве: запуск работает, но найден визуальный дефект рендера
+Запуск на MacBook Air M2 (ветка macos-main-thread, сборка --parallel 1): окно открывается,
+меню/матч запускаются, игроки бегают, звук есть, выход чистый (F12/закрытие окна — без краша,
+в логе штатное "Shutting down OpenGLRenderer3D thread"). Открыт новый дефект: поле, стадион и
+часть 2D-интерфейса чёрные — не рендерятся текстуры (игроки на вершинных цветах видны). В логе
+ошибок нет. Гипотеза: GetGLPixelFormatFromSurface возвращает GL_ABGR_EXT для SDL3 RGBA8888,
+который в core profile может не поддерживаться. По пути закрыты три блокера macOS:
+1) GL_ABGR_EXT не компилировался (SDL_opengl_glext.h был под #ifdef WIN32) — инклюд расширен на __APPLE__;
+2) шейдеры simple/lighting/ambient/postprocess использовали texture2D (GLSL 1.30), недоступный в
+#version 150 core на Apple GL — заменены на texture();
+3) дедлок старта: InitGameContext грузил ресурсы через Command::Wait() до запуска render loop —
+на macOS системы/окно создаются на main thread (новый InitGameSystems), вся игра (InitGameContext +
+sequence setup + Run) — во вспомогательном boost::thread, render loop — на main thread.
+Windows/Linux не затронуты (тот же код не-macOS-ветки main(), шейдеры texture() валидны в 150).
+## [2026-08-13] fix | macOS: чёрные текстуры (поле/UI) устранены
+Причина: SDL_PIXELFORMAT_RGBA8888 на little-endian хранит байты A,B,G,R (Rmask=0xFF000000),
+GetGLPixelFormatFromSurface мапил его на GL_ABGR_EXT, а core profile его не принимает
+(glTexImage2D даёт GL_INVALID_ENUM, текстура чёрная). Все поверхности, создаваемые кодом
+(CreateSDLSurface: поле, UI, HUD, текст), были чёрными; файловые текстуры (RGB24/ABGR8888,
+Rmask=0x000000FF -> GL_RGBA) работали — потому поле/интерфейс не отображались, а стадион/часть
+текстур были видны. Фикс: CreateSDLSurface и pow2-поверхность текста переведены на
+SDL_PIXELFORMAT_RGBA32 (= ABGR8888 на LE, байты R,G,B,A == GL_RGBA) + glPixelStorei(
+GL_UNPACK_ALIGNMENT, 1) для тугоупакованных RGB24. Побочно починен sdl_alphablit /
+sdl_setsurfacealpha (читали байты как R,G,B,A — для RGBA8888 это было неверно). Проверено на
+устройстве (MacBook Air M2): поле, стадион, интерфейс и текст отображаются, ошибок в логе нет.

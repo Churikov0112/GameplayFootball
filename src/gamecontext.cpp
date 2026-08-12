@@ -174,6 +174,23 @@ boost::intrusive_ptr<Geometry> GetSmallDebugCircle1() { return smallDebugCircle1
 boost::intrusive_ptr<Geometry> GetSmallDebugCircle2() { return smallDebugCircle2; }
 boost::intrusive_ptr<Geometry> GetLargeDebugCircle() { return largeDebugCircle; }
 
+bool InitGameSystems(Properties &cfg) {
+  config = &cfg;
+
+  SystemManager *systemManager = SystemManager::GetInstancePtr();
+  graphicsSystem = new GraphicsSystem();
+  bool ok = systemManager->RegisterSystem("GraphicsSystem", graphicsSystem);
+  if (!ok) { Log(e_FatalError, "gamecontext", "InitGameSystems", "Could not register GraphicsSystem"); return false; }
+  audioSystem = new AudioSystem();
+  ok = systemManager->RegisterSystem("AudioSystem", audioSystem);
+  if (!ok) { Log(e_FatalError, "gamecontext", "InitGameSystems", "Could not register AudioSystem"); return false; }
+
+  graphicsSystem->Initialize(*config);
+  audioSystem->Initialize(*config);
+
+  return true;
+}
+
 bool InitGameContext(Properties &cfg) {
   config = &cfg;
 
@@ -181,16 +198,12 @@ bool InitGameContext(Properties &cfg) {
   bool dbSuccess = db->Load("databases/default/database.sqlite");
   if (!dbSuccess) { Log(e_FatalError, "gamecontext", "InitGameContext", "Could not open database"); return false; }
 
-  SystemManager *systemManager = SystemManager::GetInstancePtr();
-  graphicsSystem = new GraphicsSystem();
-  bool ok = systemManager->RegisterSystem("GraphicsSystem", graphicsSystem);
-  if (!ok) { Log(e_FatalError, "gamecontext", "InitGameContext", "Could not register GraphicsSystem"); return false; }
-  audioSystem = new AudioSystem();
-  ok = systemManager->RegisterSystem("AudioSystem", audioSystem);
-  if (!ok) { Log(e_FatalError, "gamecontext", "InitGameContext", "Could not register AudioSystem"); return false; }
-
-  graphicsSystem->Initialize(*config);
-  audioSystem->Initialize(*config);
+#ifndef __APPLE__
+  // macOS creates the graphics/audio systems (and the GL window) on the main
+  // thread before the scheduler thread starts; see src/main.cpp. All other
+  // platforms create them here, inside the game context.
+  if (!InitGameSystems(cfg)) return false;
+#endif
 
   scene2D = boost::shared_ptr<Scene2D>(new Scene2D("scene2D", *config));
   SceneManager::GetInstance().RegisterScene(scene2D);
