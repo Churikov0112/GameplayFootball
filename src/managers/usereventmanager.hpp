@@ -59,21 +59,19 @@ namespace blunted {
       Vector3 GetMouseRelativePos() const;
 
       int GetJoystickCount() {
-        int count = 0;
-        SDL_GetJoysticks(&count);
-        return count;
+        return gamepadCount;
       }
+      SDL_Gamepad *GetGamepad(int slot);
+      SDL_JoystickID GetJoystickID(int slot);
+      int GetSlotForJoystickID(SDL_JoystickID id);
+      bool HasAxis(int slot, SDL_GamepadAxis axis);
       bool GetJoyButtonState(int joyID, int sdlJoyButtonID) const;
       void SetJoyButtonState(int joyID, int sdlJoyButtonID, bool newState);
 
       float GetJoystickAxis(int joyID, int axisID, bool deadzone = true) const;
-      float GetJoystickAxisRaw(int joyID, int axisID) const;
-      float GetJoystickAxisCalibrationMin(int joyID, int axisID);
-      float GetJoystickAxisCalibrationMax(int joyID, int axisID);
-      float GetJoystickAxisCalibrationRest(int joyID, int axisID);
-      void SetJoystickAxisCalibration(int joyID, int axisID, float min, float max, float rest);
 
     protected:
+      void RescanGamepads();
       // may need to switch to the vectors below in the future. why? SDL_keysym also takes into account unicode and modifier stuff, and contains the SDL_Keycodes.
       // so basically, it's the parent structure, and we are going to need that info at some point, and we can't make an array with the max size (probably) since
       // i guess it has a dynamic size.
@@ -82,10 +80,11 @@ namespace blunted {
 
       bool mousePressed[8];
 
-      SDL_Joystick *joystick[_JOYSTICK_MAX];
+      SDL_Gamepad *gamepad[_JOYSTICK_MAX];
+      SDL_JoystickID joystickID[_JOYSTICK_MAX]; // stable device key per slot
+      int gamepadCount = 0; // actual count, updated in RescanGamepads (thread-safe read for GetJoystickCount)
       bool joyButtonPressed[_JOYSTICK_MAX][_JOYSTICK_MAXBUTTONS];
       float joyAxis[_JOYSTICK_MAX][_JOYSTICK_MAXAXES];
-      float joyAxisCalibration[_JOYSTICK_MAX][_JOYSTICK_MAXAXES][3]; // min, max, rest
 
       mutable boost::mutex keyPressedMutex;
       mutable boost::mutex mousePressedMutex;

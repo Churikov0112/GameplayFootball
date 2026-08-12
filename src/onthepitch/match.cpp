@@ -592,11 +592,22 @@ void Match::UpdateControllerSetup() {
 
   // add new
   const std::vector<SideSelection> sides = menuTask->GetControllerSetup();
+  const std::vector<IHIDevice*> &controllers = GetControllers();
   for (unsigned int i = 0; i < sides.size(); i++) {
     if (sides.at(i).side != 0) {
       int teamID = int(round(sides.at(i).side * 0.5 + 0.5));
-      teams[teamID]->AddHumanGamer(controllers.at(sides.at(i).controllerID), (e_PlayerColor)i); // todo: proper color
-      //printf("team id %i, %i\n", teamID, sides.at(i).controllerID);
+      IHIDevice *device = 0;
+      if (sides.at(i).joystickID != 0) {
+        for (unsigned int c = 1; c < controllers.size(); c++) {
+          HIDGamepad *pad = static_cast<HIDGamepad*>(controllers.at(c));
+          if (pad->GetJoystickID() == sides.at(i).joystickID) { device = controllers.at(c); break; }
+        }
+      } else {
+        for (unsigned int c = 0; c < controllers.size(); c++) {
+          if (controllers.at(c)->GetDeviceType() == e_HIDeviceType_Keyboard) { device = controllers.at(c); break; }
+        }
+      }
+      if (device) teams[teamID]->AddHumanGamer(device, (e_PlayerColor)i); // todo: proper color
     }
   }
 }

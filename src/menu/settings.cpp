@@ -479,8 +479,6 @@ GamepadSetupPage::GamepadSetupPage(Gui2WindowManager *windowManager, const Gui2P
   this->AddView(title);
   title->Show();
 
-  Gui2Button *buttonCalibration = new Gui2Button(windowManager, "button_gamepadsetupmenu_calibration", 0, 0, 30, 3, "axes calibration");
-  buttonCalibration->sig_OnClick.connect(boost::bind(&GamepadSetupPage::GoGamepadCalibrationPage, this, controllerID));
   Gui2Button *buttonMapping = new Gui2Button(windowManager, "button_gamepadsetupmenu_mapping", 0, 0, 30, 3, "button mapping");
   buttonMapping->sig_OnClick.connect(boost::bind(&GamepadSetupPage::GoGamepadMappingPage, this, controllerID));
   Gui2Button *buttonFunction = new Gui2Button(windowManager, "button_gamepadsetupmenu_function", 0, 0, 30, 3, "function setup");
@@ -488,26 +486,19 @@ GamepadSetupPage::GamepadSetupPage(Gui2WindowManager *windowManager, const Gui2P
 
   Gui2Grid *grid = new Gui2Grid(windowManager, "grid_settings_controller_gamepadsetup", 20, 25, 60, 55);
 
-  grid->AddView(buttonCalibration, 0, 0);
-  grid->AddView(buttonMapping, 1, 0);
-  grid->AddView(buttonFunction, 2, 0);
+  grid->AddView(buttonMapping, 0, 0);
+  grid->AddView(buttonFunction, 1, 0);
 
   grid->UpdateLayout(0.5);
   this->AddView(grid);
   grid->Show();
 
-  buttonCalibration->SetFocus();
+  buttonMapping->SetFocus();
 
   this->Show();
 }
 
 GamepadSetupPage::~GamepadSetupPage() {
-}
-
-void GamepadSetupPage::GoGamepadCalibrationPage(int controllerID) {
-  Properties properties;
-  properties.Set("controllerID", controllerID);
-  CreatePage(e_PageID_GamepadCalibration, properties);
 }
 
 void GamepadSetupPage::GoGamepadMappingPage(int controllerID) {
@@ -520,86 +511,6 @@ void GamepadSetupPage::GoGamepadFunctionPage(int controllerID) {
   Properties properties;
   properties.Set("controllerID", controllerID);
   CreatePage(e_PageID_GamepadFunction, properties);
-}
-
-
-// GAMEPAD CALIBRATION
-
-GamepadCalibrationPage::GamepadCalibrationPage(Gui2WindowManager *windowManager, const Gui2PageData &pageData) : Gui2Page(windowManager, pageData) {
-  controllerID = pageData.properties->GetInt("controllerID");
-
-  // inverted default values
-  for (int i = 0; i < _JOYSTICK_MAXAXES; i++) {
-    min[i] = 32768;
-    max[i] = -32767;
-  }
-
-  bg = new Gui2Image(windowManager, "image_settings_calibration_bg", 0, 0, 100, 13);
-  bg->LoadImage("media/menu/backgrounds/black.png");
-
-  captionExplanation[0] = new Gui2Caption(windowManager, "caption_settings_calibration_info1", 0, 0, 100, 3, "1) rotate all axes and analog buttons into their extreme positions");
-  captionExplanation[1] = new Gui2Caption(windowManager, "caption_settings_calibration_info2", 0, 0, 100, 3, "2) release all axes and analog buttons in their untouched positions");
-  captionExplanation[2] = new Gui2Caption(windowManager, "caption_settings_calibration_info3", 0, 0, 100, 3, "3) press return when done or escape to cancel");
-  captionExplanation[0]->SetPosition(50 - captionExplanation[0]->GetTextWidthPercent() * 0.5, 44);
-  captionExplanation[1]->SetPosition(50 - captionExplanation[1]->GetTextWidthPercent() * 0.5, 48);
-  captionExplanation[2]->SetPosition(50 - captionExplanation[2]->GetTextWidthPercent() * 0.5, 52);
-
-  bg->SetPosition(50 - captionExplanation[0]->GetTextWidthPercent() * 0.5 - 1, 43);
-  bg->SetSize(captionExplanation[0]->GetTextWidthPercent() + 2, 13);
-
-  this->AddView(bg);
-  this->AddView(captionExplanation[0]);
-  this->AddView(captionExplanation[1]);
-  this->AddView(captionExplanation[2]);
-  bg->Show();
-  captionExplanation[0]->Show();
-  captionExplanation[1]->Show();
-  captionExplanation[2]->Show();
-
-  this->SetFocus();
-  this->Show();
-}
-
-GamepadCalibrationPage::~GamepadCalibrationPage() {
-}
-
-void GamepadCalibrationPage::Process() {
-  const std::vector<IHIDevice*> &controllers = GetControllers();
-  HIDGamepad *controller = static_cast<HIDGamepad*>(controllers.at(controllerID));
-
-  for (int i = 0; i < _JOYSTICK_MAXAXES; i++) {
-    float value = UserEventManager::GetInstance().GetJoystickAxisRaw(controller->GetGamepadID(), i);
-    if (value < min[i]) min[i] = value;
-    if (value > max[i]) max[i] = value;
-  }
-}
-
-void GamepadCalibrationPage::ProcessKeyboardEvent(KeyboardEvent *event) {
-  if (event->GetKeyOnce(SDLK_RETURN)) {
-    SaveCalibration();
-    GoBack();
-    return;
-  }
-  if (event->GetKeyOnce(SDLK_ESCAPE)) {
-    GoBack();
-    return;
-  }
-}
-
-void GamepadCalibrationPage::SaveCalibration() {
-  const std::vector<IHIDevice*> &controllers = GetControllers();
-  HIDGamepad *controller = static_cast<HIDGamepad*>(controllers.at(controllerID));
-
-  for (int i = 0; i < _JOYSTICK_MAXAXES; i++) {
-    if (min[i] > max[i]) min[i] = max[i]; // happens if people forget to excite some joystick.. oh my
-    float rest = UserEventManager::GetInstance().GetJoystickAxisRaw(controller->GetGamepadID(), i);
-    UserEventManager::GetInstance().SetJoystickAxisCalibration(controller->GetGamepadID(), i, min[i], max[i], rest);
-    GetConfiguration()->Set(("input_gamepad_" + controller->GetIdentifier() + "_calibration_" + int_to_str(i) + "_min").c_str(), min[i]);
-    GetConfiguration()->Set(("input_gamepad_" + controller->GetIdentifier() + "_calibration_" + int_to_str(i) + "_max").c_str(), max[i]);
-    GetConfiguration()->Set(("input_gamepad_" + controller->GetIdentifier() + "_calibration_" + int_to_str(i) + "_rest").c_str(), rest);
-  }
-
-  GetConfiguration()->SaveFile(GetConfigFilename());
 }
 
 

@@ -33,7 +33,6 @@ enum e_PageID {
   e_PageID_Keyboard,
   e_PageID_Gamepads,
   e_PageID_GamepadSetup,
-  e_PageID_GamepadCalibration,
   e_PageID_GamepadMapping,
   e_PageID_GamepadFunction,
   e_PageID_Graphics,

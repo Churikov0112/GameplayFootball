@@ -26,6 +26,8 @@
 #include "hid/keyboard.hpp"
 #include "hid/gamepad.hpp"
 
+#include "managers/usereventmanager.hpp"
+
 #include "SDL3/SDL.h"
 
 using namespace blunted;
@@ -249,18 +251,50 @@ bool InitGameContext(Properties &cfg) {
 
   geometry.reset();
 
-  // controllers
-
-  HIDKeyboard *keyboard = new HIDKeyboard();
-  controllers.push_back(keyboard);
-  int joystickCount = 0;
-  SDL_GetJoysticks(&joystickCount);
-  for (int i = 0; i < joystickCount; i++) {
-    HIDGamepad *gamepad = new HIDGamepad(i);
-    controllers.push_back(gamepad);
-  }
+  // controllers (keyboard always present, gamepads rescanned dynamically)
+  controllers.clear();
+  controllers.push_back(new HIDKeyboard());
+  RefreshGamepads();
 
   return true;
+}
+
+bool RefreshGamepads() {
+  // called from the game thread (GameTask::ProcessPhase)
+  bool changed = false;
+  int count = UserEventManager::GetInstance().GetJoystickCount();
+  // remove gamepads that are gone
+  for (int i = (int)controllers.size() - 1; i >= 1; i--) {
+    HIDGamepad *pad = static_cast<HIDGamepad*>(controllers.at(i));
+    bool stillThere = false;
+    for (int j = 0; j < count; j++) {
+      if (UserEventManager::GetInstance().GetJoystickID(j) == pad->GetJoystickID()) { stillThere = true; break; }
+    }
+    if (!stillThere) {
+      delete controllers.at(i);
+      controllers.erase(controllers.begin() + i);
+      changed = true;
+    }
+  }
+  // add newly connected gamepads (keep ordering by slot)
+  int existing = (int)controllers.size() - 1;
+  for (int j = existing; j < count; j++) {
+    controllers.push_back(new HIDGamepad(j));
+    changed = true;
+  }
+  // if an existing gamepad changed slot, re-map it (recreate to keep gamepadID == slot)
+  // note: controllers[0] is the keyboard, so controllers[i] holds gamepad slot i-1
+  for (unsigned int i = 1; i < controllers.size(); i++) {
+    HIDGamepad *pad = static_cast<HIDGamepad*>(controllers.at(i));
+    int slot = UserEventManager::GetInstance().GetSlotForJoystickID(pad->GetJoystickID());
+    if (slot != (signed int)(i - 1)) {
+      // slot changed: recreate so gamepadID matches slot
+      delete controllers.at(i);
+      controllers.at(i) = new HIDGamepad(slot);
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 void ShutdownGameContext() {

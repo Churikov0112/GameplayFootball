@@ -11,7 +11,10 @@
 #include "utils/gui2/widgets/root.hpp"
 #include "utils/gui2/widgets/grid.hpp"
 #include "utils/gui2/widgets/button.hpp"
+#include "utils/gui2/widgets/caption.hpp"
 #include "utils/gui2/widgets/image.hpp"
+
+#include "hid/gamepad.hpp"
 
 #include "../onthepitch/match.hpp"
 
@@ -24,6 +27,12 @@ class ControllerSelectPage : public Gui2Page {
     virtual ~ControllerSelectPage();
 
     void SetImagePositions();
+    void ToggleLayout(int controllerID);
+    void SetConfirmed(int controllerID, bool confirmed);
+    void DrawPixelLine(boost::intrusive_ptr<Image2D> img, int x0, int y0, int x1, int y1, const Vector3 &color);
+    void CheckAllConfirmed();
+    void ExitControllerSelectPage();
+    void BuildDeviceViews(const std::vector<SideSelection> &savedSides);
 
     virtual void Process();
     virtual void ProcessKeyboardEvent(KeyboardEvent *event);
@@ -34,6 +43,11 @@ class ControllerSelectPage : public Gui2Page {
     std::vector<SideSelection> sides;
     std::vector<unsigned long> delay;
     bool inGame;
+    bool resumeOnClose = false; // resume the paused match when this window closes (opened from the match, not from the pause menu)
+
+    Gui2Caption *layoutCaption[_JOYSTICK_MAX];
+    Gui2Image *confirmIcon[_JOYSTICK_MAX];
+    std::vector<Gui2View*> deviceViews; // device rows created by BuildDeviceViews (controller images, layout labels, confirm icons)
 
 };
 

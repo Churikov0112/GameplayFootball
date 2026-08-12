@@ -9,6 +9,9 @@
 #include "framework/scheduler.hpp"
 #include "managers/taskmanager.hpp"
 #include "managers/resourcemanagerpool.hpp"
+#include "managers/environmentmanager.hpp"
+#include "menu/pagefactory.hpp"
+#include "base/properties.hpp"
 
 #include "blunted.hpp"
 
@@ -124,6 +127,57 @@ void GameTask::GetPhase() {
 }
 
 void GameTask::ProcessPhase() {
+
+  bool gamepadsChanged = RefreshGamepads();
+
+  // if a gamepad was plugged/unplugged, re-bind human gamers so the match never
+  // reads a destroyed HIDGamepad (RefreshGamepads deletes missing devices)
+  if (gamepadsChanged && match) {
+    match->UpdateControllerSetup();
+  }
+
+  // if a human gamepad was unplugged mid-match: pause and open controller select on top
+  if (match) {
+    unsigned long now_ms = EnvironmentManager::GetInstance().GetTime_ms();
+    if (now_ms - lastGamepadCheckTime_ms > 1000) {
+      lastGamepadCheckTime_ms = now_ms;
+      bool anyGamerDeviceMissing = false;
+      const std::vector<SideSelection> sides = GetMenuTask()->GetControllerSetup();
+      const std::vector<IHIDevice*> &controllers = GetControllers();
+      for (unsigned int i = 0; i < sides.size(); i++) {
+        if (sides.at(i).side == 0) continue;
+        if (sides.at(i).joystickID == 0) continue; // keyboard
+        bool found = false;
+        for (unsigned int c = 1; c < controllers.size(); c++) {
+          if (static_cast<HIDGamepad*>(controllers.at(c))->GetJoystickID() == sides.at(i).joystickID) { found = true; break; }
+        }
+        if (!found) { anyGamerDeviceMissing = true; break; }
+      }
+      // only open the window if it is not already on top of the page stack
+      bool controllerSelectOpen = false;
+      const std::vector<Gui2PageData> &pageStack = GetMenuTask()->GetWindowManager()->GetPagePath()->GetPath();
+      if (!pageStack.empty() && pageStack.back().pageID == e_PageID_ControllerSelect) controllerSelectOpen = true;
+      if (anyGamerDeviceMissing && !controllerSelectOpen) {
+        // pause the match (unless it is already paused) and show controller
+        // select on top. If we paused it ourselves, mark resumeOnClose so the
+        // window can resume the match when it closes.
+        bool wasPaused = match->GetPause();
+        if (!wasPaused) match->Pause(true);
+        Properties csProps;
+        csProps.SetBool("isInGame", true);
+        csProps.SetBool("resumeOnClose", !wasPaused);
+        // open through the top page (Gui2Page::CreatePage) so the current page
+        // is properly replaced in the stack; opening via the page factory
+        // directly would leave the previous page in the root and leak it.
+        Gui2Page *topPage = GetMenuTask()->GetWindowManager()->GetPageFactory()->GetMostRecentlyCreatedPage();
+        if (topPage) {
+          topPage->CreatePage((int)e_PageID_ControllerSelect, csProps, 0);
+        } else {
+          GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage((int)e_PageID_ControllerSelect, csProps, 0);
+        }
+      }
+    }
+  }
 
   for (unsigned int i = 0; i < GetControllers().size(); i++) {
     GetControllers().at(i)->Process();

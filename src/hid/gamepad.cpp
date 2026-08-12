@@ -13,22 +13,56 @@ HIDGamepad::HIDGamepad(int gamepadID) : gamepadID(gamepadID) {
 
   deviceType = e_HIDeviceType_Gamepad;
   std::string name = "unknown";
-  int count = 0;
-  SDL_JoystickID *joystickIDs = SDL_GetJoysticks(&count);
-  if (gamepadID >= 0 && gamepadID < count) {
-    SDL_Joystick *joy = SDL_OpenJoystick(joystickIDs[gamepadID]);
-    if (joy) {
-      name = SDL_GetJoystickName(joy);
-      SDL_CloseJoystick(joy);
-    }
+  joystickID = UserEventManager::GetInstance().GetJoystickID(gamepadID);
+  SDL_Gamepad *pad = UserEventManager::GetInstance().GetGamepad(gamepadID);
+  if (pad) {
+    const char *n = SDL_GetGamepadName(pad);
+    if (n) name = n;
   }
-  if (joystickIDs) SDL_free(joystickIDs);
   identifier = name + " #" + int_to_str(gamepadID);
 
   LoadConfig();
 }
 
 HIDGamepad::~HIDGamepad() {
+}
+
+static const std::vector<e_ControllerButton>& GetPresetFunctionMapping(e_ControllerLayout layout) {
+  static const std::vector<e_ControllerButton> pesPreset = {
+    e_ControllerButton_Up, e_ControllerButton_Right, e_ControllerButton_Down, e_ControllerButton_Left, // movement
+    e_ControllerButton_Y,  // LongPass
+    e_ControllerButton_B,  // HighPass
+    e_ControllerButton_A,  // ShortPass
+    e_ControllerButton_X,  // Shot
+    e_ControllerButton_Y,  // KeeperRush
+    e_ControllerButton_B,  // Sliding
+    e_ControllerButton_A,  // Pressure
+    e_ControllerButton_X,  // TeamPressure
+    e_ControllerButton_L1, // Switch
+    e_ControllerButton_L2, // Special
+    e_ControllerButton_R1, // Sprint
+    e_ControllerButton_R2, // Dribble
+    e_ControllerButton_Select, // Select
+    e_ControllerButton_Start  // Start
+  };
+  static const std::vector<e_ControllerButton> fifaPreset = {
+    e_ControllerButton_Up, e_ControllerButton_Right, e_ControllerButton_Down, e_ControllerButton_Left,
+    e_ControllerButton_Y,  // LongPass
+    e_ControllerButton_X,  // HighPass  (FIFA: X = cross/lob)
+    e_ControllerButton_A,  // ShortPass (FIFA: A = ground pass)
+    e_ControllerButton_B,  // Shot      (FIFA: B = shoot)
+    e_ControllerButton_Y,  // KeeperRush
+    e_ControllerButton_B,  // Sliding   (FIFA: B = tackle in defence)
+    e_ControllerButton_B,  // Pressure  (FIFA: B = standing tackle)
+    e_ControllerButton_X,  // TeamPressure
+    e_ControllerButton_L1, // Switch
+    e_ControllerButton_L2, // Special
+    e_ControllerButton_R1, // Sprint
+    e_ControllerButton_R2, // Dribble
+    e_ControllerButton_Select, // Select
+    e_ControllerButton_Start  // Start
+  };
+  return (layout == e_ControllerLayout_FIFA) ? fifaPreset : pesPreset;
 }
 
 void HIDGamepad::LoadConfig() {
@@ -39,58 +73,36 @@ void HIDGamepad::LoadConfig() {
     previousControllerButtonState[i] = false;
   }
 
-  for (int i = 0; i < _JOYSTICK_MAXAXES; i++) {
-    float min = GetConfiguration()->GetReal(("input_gamepad_" + GetIdentifier() + "_calibration_" + int_to_str(i) + "_min").c_str(), -32768);
-    float max = GetConfiguration()->GetReal(("input_gamepad_" + GetIdentifier() + "_calibration_" + int_to_str(i) + "_max").c_str(), 32767);
-    float rest = GetConfiguration()->GetReal(("input_gamepad_" + GetIdentifier() + "_calibration_" + int_to_str(i) + "_rest").c_str(), 0);
-    UserEventManager::GetInstance().SetJoystickAxisCalibration(GetGamepadID(), i, min, max, rest);
-  }
-
   std::string gpbuttonIDs_string[14];
   for (int i = 0; i < e_ControllerButton_Size; i++) {
 
-    // xbox controller defaults
-    int defaultButton = 0;
-    if      (i == 0) defaultButton = -3;
-    else if (i == 1) defaultButton = -2;
-    else if (i == 2) defaultButton = -4;
-    else if (i == 3) defaultButton = -1;
-    else if (i == 4) defaultButton = 3;
-    else if (i == 5) defaultButton = 1;
-    else if (i == 6) defaultButton = 0;
-    else if (i == 7) defaultButton = 2;
-    else if (i == 8) defaultButton = 4;
-    else if (i == 9) defaultButton = -6;
-    else if (i == 10) defaultButton = 5;
-    else if (i == 11) defaultButton = -5;
-    else if (i == 12) defaultButton = 6;
-    else if (i == 13) defaultButton = 7;
+    // xbox controller defaults (semantic SDL3 layout)
+    signed int defaultButton = 0;
+    if      (i == 0) defaultButton = -3;    // Up:    LEFTY negative
+    else if (i == 1) defaultButton = -2;    // Right: LEFTX positive
+    else if (i == 2) defaultButton = -4;    // Down:  LEFTY positive
+    else if (i == 3) defaultButton = -1;    // Left:  LEFTX negative
+    else if (i == 4) defaultButton = 3;     // Y
+    else if (i == 5) defaultButton = 1;     // B
+    else if (i == 6) defaultButton = 0;     // A
+    else if (i == 7) defaultButton = 2;     // X
+    else if (i == 8) defaultButton = 9;     // L1 == LEFT_SHOULDER
+    else if (i == 9) defaultButton = -10;   // L2 == LEFT_TRIGGER (positive half)
+    else if (i == 10) defaultButton = 10;   // R1 == RIGHT_SHOULDER
+    else if (i == 11) defaultButton = -12;  // R2 == RIGHT_TRIGGER (positive half)
+    else if (i == 12) defaultButton = 4;    // Select == BACK
+    else if (i == 13) defaultButton = 6;    // Start == START
 
     controllerMapping[i] = GetConfiguration()->GetInt(("input_gamepad_" + GetIdentifier() + "_" + int_to_str(i)).c_str(), defaultButton);
   }
 
-  for (int i = 0; i < e_ButtonFunction_Size; i++) {
-    int defaultMapping = 0;
-    if      (i == e_ButtonFunction_Up) defaultMapping = e_ControllerButton_Up;
-    else if (i == e_ButtonFunction_Right) defaultMapping = e_ControllerButton_Right;
-    else if (i == e_ButtonFunction_Down) defaultMapping = e_ControllerButton_Down;
-    else if (i == e_ButtonFunction_Left) defaultMapping = e_ControllerButton_Left;
-    else if (i == e_ButtonFunction_LongPass) defaultMapping = e_ControllerButton_Y;
-    else if (i == e_ButtonFunction_HighPass) defaultMapping = e_ControllerButton_B;
-    else if (i == e_ButtonFunction_ShortPass) defaultMapping = e_ControllerButton_A;
-    else if (i == e_ButtonFunction_Shot) defaultMapping = e_ControllerButton_X;
-    else if (i == e_ButtonFunction_KeeperRush) defaultMapping = e_ControllerButton_Y;
-    else if (i == e_ButtonFunction_Sliding) defaultMapping = e_ControllerButton_B;
-    else if (i == e_ButtonFunction_Pressure) defaultMapping = e_ControllerButton_A;
-    else if (i == e_ButtonFunction_TeamPressure) defaultMapping = e_ControllerButton_X;
-    else if (i == e_ButtonFunction_Switch) defaultMapping = e_ControllerButton_L1;
-    else if (i == e_ButtonFunction_Special) defaultMapping = e_ControllerButton_L2;
-    else if (i == e_ButtonFunction_Sprint) defaultMapping = e_ControllerButton_R1;
-    else if (i == e_ButtonFunction_Dribble) defaultMapping = e_ControllerButton_R2;
-    else if (i == e_ButtonFunction_Start) defaultMapping = e_ControllerButton_Start;
-    else if (i == e_ButtonFunction_Select) defaultMapping = e_ControllerButton_Select;
+  layout = (e_ControllerLayout)GetConfiguration()->GetInt(("input_gamepad_" + GetIdentifier() + "_layout").c_str(), defaultControllerLayout);
+  // reserved simple-mode flag (future feature, currently unused)
+  GetConfiguration()->GetBool(("input_gamepad_" + GetIdentifier() + "_simple").c_str(), defaultControllerSimpleMode);
 
-    functionMapping[i] = (e_ControllerButton)GetConfiguration()->GetInt(("input_gamepad_" + GetIdentifier() + "_mapping_" + int_to_str(i)).c_str(), defaultMapping);
+  const std::vector<e_ControllerButton> &preset = GetPresetFunctionMapping(layout);
+  for (int i = 0; i < e_ButtonFunction_Size; i++) {
+    functionMapping[i] = (e_ControllerButton)GetConfiguration()->GetInt(("input_gamepad_" + GetIdentifier() + "_mapping_" + int_to_str(i)).c_str(), preset.at(i));
   }
 }
 
@@ -105,6 +117,17 @@ void HIDGamepad::SaveConfig() {
   GetConfiguration()->SaveFile(GetConfigFilename());
 }
 
+void HIDGamepad::SetLayout(e_ControllerLayout newLayout) {
+  boost::mutex::scoped_lock blah(mutex);
+  layout = newLayout;
+  const std::vector<e_ControllerButton> &preset = GetPresetFunctionMapping(layout);
+  for (int i = 0; i < e_ButtonFunction_Size; i++) {
+    functionMapping[i] = preset.at(i);
+  }
+  GetConfiguration()->Set(("input_gamepad_" + GetIdentifier() + "_layout").c_str(), (int)layout);
+  GetConfiguration()->SaveFile(GetConfigFilename());
+}
+
 void HIDGamepad::Process() {
   boost::mutex::scoped_lock blah(mutex);
   //printf("gamepad ID #%i\n", gamepadID);
@@ -113,14 +136,11 @@ void HIDGamepad::Process() {
     signed int buttonID = controllerMapping[i];
     if (buttonID >= 0) { // button
       controllerButtonState[i] = UserEventManager::GetInstance().GetJoyButtonState(gamepadID, buttonID) ? 1.0 : 0.0;
-    } else { // axis
-      // decode
+    } else { // axis (semantic, encoded as -(2*axis + 1) = negative half, -(2*axis + 2) = positive half)
       int axisID = -buttonID - 1;
       signed int sign = ((axisID % 2) * 2) - 1;
       axisID /= 2;
-      bool deadzone = true;
-      if (axisID < 2) deadzone = false;
-      float value = UserEventManager::GetInstance().GetJoystickAxis(gamepadID, axisID, deadzone);
+      float value = UserEventManager::GetInstance().GetJoystickAxis(gamepadID, axisID, true);
       if ((sign < 0 && value < 0) || (sign > 0 && value > 0)) controllerButtonState[i] = fabs(value); else
                                                               controllerButtonState[i] = 0;
     }

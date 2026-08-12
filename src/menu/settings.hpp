@@ -111,34 +111,10 @@ class GamepadSetupPage : public Gui2Page {
     GamepadSetupPage(Gui2WindowManager *windowManager, const Gui2PageData &pageData);
     virtual ~GamepadSetupPage();
 
-    void GoGamepadCalibrationPage(int controllerID);
     void GoGamepadMappingPage(int controllerID);
     void GoGamepadFunctionPage(int controllerID);
 
   protected:
-
-};
-
-class GamepadCalibrationPage : public Gui2Page {
-
-  public:
-    GamepadCalibrationPage(Gui2WindowManager *windowManager, const Gui2PageData &pageData);
-    virtual ~GamepadCalibrationPage();
-
-    virtual void Process();
-    virtual void ProcessWindowingEvent(WindowingEvent *event) { event->Accept(); }
-    virtual void ProcessKeyboardEvent(KeyboardEvent *event);
-
-  protected:
-    virtual void SaveCalibration();
-
-    int controllerID;
-
-    float min[_JOYSTICK_MAXAXES];
-    float max[_JOYSTICK_MAXAXES];
-
-    Gui2Image *bg;
-    Gui2Caption *captionExplanation[3];
 
 };
 
