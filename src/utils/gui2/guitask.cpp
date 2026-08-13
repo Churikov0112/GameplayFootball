@@ -34,8 +34,10 @@ namespace blunted {
       }
     }
 
-    joyButtonActivate = 1;
-    joyButtonEscape = 1;
+    // default GUI confirm/back in the SDL3 semantic layout (A/SOUTH = confirm, B/EAST = back);
+    // overridden per menu-driving gamepad via SetEventJoyButtons
+    joyButtonActivate = SDL_GAMEPAD_BUTTON_SOUTH;
+    joyButtonEscape = SDL_GAMEPAD_BUTTON_EAST;
     activeJoystick = 0;
 
     keyboard = true;

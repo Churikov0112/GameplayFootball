@@ -2022,7 +2022,11 @@ struct GLfunctions {
             break;
         }
 
-        if (contextIsActive) { // context must be active
+        // device hot-plug must be processed even while the window is not focused:
+        // a missed GAMEPAD_ADDED/REMOVED would leave the controller list stale
+        // forever (the game only rescans on these events), so a gamepad plugged
+        // or unplugged during focus loss would appear stuck on the UI.
+        if (contextIsActive || event.type == SDL_EVENT_GAMEPAD_ADDED || event.type == SDL_EVENT_GAMEPAD_REMOVED) {
           UserEventManager::GetInstance().InputSDLEvent(event);
         }
 
