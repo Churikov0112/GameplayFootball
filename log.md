@@ -195,3 +195,30 @@ SDL_PIXELFORMAT_RGBA32 (= ABGR8888 на LE, байты R,G,B,A == GL_RGBA) + glP
 GL_UNPACK_ALIGNMENT, 1) для тугоупакованных RGB24. Побочно починен sdl_alphablit /
 sdl_setsurfacealpha (читали байты как R,G,B,A — для RGBA8888 это было неверно). Проверено на
 устройстве (MacBook Air M2): поле, стадион, интерфейс и текст отображаются, ошибок в логе нет.
+## [2026-08-13] deploy | macOS-релиз v0.3.0: .app-бандл собран, упакован и проверен
+Собрано на MacBook Air M2 (тег v0.3.0, detached HEAD, `cmake --build --parallel 1`, депсы brew:
+sdl3 3.4.14, sdl3_image, sdl3_ttf, boost 1.90, openal-soft; без параллелизма — комп виснет).
+`tools/release/package_macos.sh` при первом прогоне был неработоспособен, вскрыты и починены четыре
+бага (только скрипт упаковки, код игры не тронут): 1) `declare -A` требует bash 4 — macOS-шебанга
+`/usr/bin/env bash` даёт 3.2, запуск через brew bash 5; 2) `codesign "$APP"` — относительный путь,
+а .app живёт в mktemp-каталоге, и `$OLDPWD` в свежем shell не задан (set -e убивал скрипт до
+`mkdir dist`); 3) `cp -L` падал на r--r--r-- dylib (brew) при дублях в closure — `cp -Lf`;
+4) главное: `collect_deps` отбрасывал ссылки `@rpath`, из бандла выпадала `libjxl_cms.0.12.dylib`
+и не переписывались `@rpath`-зависимости между dylib — на машине без brew приложение не загрузилось
+бы; теперь @rpath/@loader_path резолвятся через brew lib, 35 dylib в бандле, id переписаны
+безусловно. Файндер-запуск не работал: игра резолвит пути относительно CWD, а macOS стартует .app
+из `/` (fatal `file not found or empty: football.config`) — в скрипт добавлен launcher: бинарник
+переименован в `gameplayfootball-bin`, на его месте шелл-скрипт, chdir'ящий в
+`Contents/Resources/data`. Проверка пакета: `otool -L` — только `@executable_path/../Frameworks`
+и системные, без /opt/homebrew; `codesign --verify --deep --strict` OK (adhoc, не нотаризован);
+запуск через `open` — окно/меню работают, ошибок в логе 0, закрытие окна — штатное
+`Shutting down OpenGLRenderer3D thread`. Артефакт `dist/GameplayFootball-v0.3.0-macos-arm64.zip`
+(~23 МБ). Остаток: пакет не нотаризован (нет Apple Developer); бандл пишет log.txt/saves внутрь
+Resources/data (см. docs/wiki/открытые-вопросы.md).
+## [2026-08-13] session | macOS-релиз v0.3.0 упакован, загружен на GitHub, бандл проверен на устройстве
+Сессия: сборка тега v0.3.0 на MacBook Air M2 (без параллелизма), починка tools/release/package_macos.sh
+(четыре бага, см. запись deploy), launcher для двойнокликабельного .app, проверка пакета
+(otool чист, codesign OK, запуск через open, игра, закрытие окна — штатный выход без ошибок),
+загрузка GameplayFootball-v0.3.0-macos-arm64.zip на release v0.3.0, обновление
+docs/wiki/открытые-вопросы.md. Незакоммиченные изменения на выходе: tools/release/package_macos.sh,
+docs/wiki/открытые-вопросы.md, log.md. Ветка — detached HEAD на v0.3.0.
