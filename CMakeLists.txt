@@ -25,49 +25,45 @@ if(UNIX)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O3")
 endif(UNIX)
 
-# Find required libraries. Windows builds use vcpkg, which ships a modular CMake
-# config file for every dependency, so CONFIG mode is used there. System/distro
-# builds (Ubuntu libboost-all-dev, Homebrew) are done with b2, which installs only
-# the main BoostConfig.cmake and not the modular per-component configs, so
-# find_package(Boost COMPONENTS ...) fails against them: keep FindBoost's manual
-# search on non-Windows (it works with any boost layout). Boost.System is header-only
-# since 1.69 (no compiled lib ships anywhere), so it is not requested as a component.
+# Find required libraries. Only two differences are real across platforms: Windows
+# builds use vcpkg (manifest mode), Linux/macOS use system packages (apt/brew).
+# - Boost: system builds (Ubuntu libboost-all-dev, Homebrew) are done with b2, which
+#   installs only the main BoostConfig.cmake and not the modular per-component
+#   configs, so find_package(Boost COMPONENTS ...) fails against them and FindBoost's
+#   manual search is forced; vcpkg's Boost is consumed in CONFIG mode. Boost.System
+#   is header-only since 1.69, so it is not requested as a component.
+# - SQLite: vcpkg ships its config under the unofficial name (there is no
+#   SQLite3Config.cmake), so it is requested explicitly on Windows.
+# Everything else resolves the same on every platform: SDL3/SDL3_image/SDL3_ttf have
+# no Find modules, so find_package falls back to the CMake config files where they
+# exist (vcpkg, system SDL3), and CMake's FindOpenAL/FindSQLite3 locate the system or
+# vcpkg libraries through the toolchain prefix path.
+find_package(OpenGL REQUIRED)
+find_package(SDL3 REQUIRED)
+find_package(SDL3_image REQUIRED)
+find_package(SDL3_ttf REQUIRED)
+find_package(OpenAL REQUIRED)
 if(WIN32)
-  find_package(OpenGL REQUIRED)
-  find_package(SDL3 REQUIRED CONFIG)
-  find_package(SDL3_image REQUIRED CONFIG)
-  find_package(SDL3_ttf REQUIRED CONFIG)
   find_package(Boost REQUIRED COMPONENTS thread filesystem CONFIG)
-  find_package(OpenAL REQUIRED CONFIG)
-  # vcpkg's sqlite3 ships its config under the unofficial name (there is no
-  # SQLite3Config.cmake), so request it explicitly.
   find_package(unofficial-sqlite3 CONFIG REQUIRED)
 else()
-  find_package(OpenGL REQUIRED)
-  find_package(SDL3 REQUIRED)
-  find_package(SDL3_image REQUIRED)
-  find_package(SDL3_ttf REQUIRED)
   set(Boost_NO_BOOST_CMAKE ON)
   find_package(Boost REQUIRED COMPONENTS thread filesystem)
-  find_package(OpenAL REQUIRED)
   find_package(SQLite3 REQUIRED)
 endif()
 
-# CONFIG mode does not set the *_INCLUDE_DIR / *_LIBRARY cache variables that the
-# Find modules provide, but the game libraries compile against these includes
-# directly (they do not link blunted2), so derive the missing values from the
-# imported targets.
 if(WIN32)
   set(SQLite3_LINK_TARGET unofficial::sqlite3::sqlite3)
-  set(OPENAL_LIBRARY OpenAL::OpenAL)
 else()
   set(SQLite3_LINK_TARGET SQLite::SQLite3)
 endif()
+# CONFIG mode does not set the *_INCLUDE_DIR cache variables that the Find modules
+# provide, but the game libraries compile against these includes directly (they do
+# not link blunted2), so derive the missing values on Windows from the imported
+# targets. OpenAL is found by the FindOpenAL module on every platform and defines
+# OpenAL::OpenAL, so it needs no special-casing.
 if(NOT Boost_INCLUDE_DIR)
   get_target_property(Boost_INCLUDE_DIR Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
-endif()
-if(NOT OPENAL_INCLUDE_DIR)
-  get_target_property(OPENAL_INCLUDE_DIR OpenAL::OpenAL INTERFACE_INCLUDE_DIRECTORIES)
 endif()
 if(NOT SQLITE3_INCLUDE_DIRS)
   get_target_property(SQLITE3_INCLUDE_DIRS ${SQLite3_LINK_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
@@ -194,7 +190,7 @@ target_include_directories(blunted2 PUBLIC
 target_link_libraries(blunted2 PUBLIC
         Boost::filesystem Boost::thread ${SQLite3_LINK_TARGET}
         SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf
-        ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
+        OpenAL::OpenAL ${OPENGL_LIBRARIES})
 if(UNIX)
    target_link_libraries(blunted2 PUBLIC dl m)
 endif(UNIX)
