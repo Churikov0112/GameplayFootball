@@ -103,6 +103,13 @@ xcopy /e /i data build\Release
 
 Run `gameplayfootball.exe` inside `build\Release` (the game uses relative data paths).
 
+## Releases
+
+Prebuilt binaries for Windows (x86/x64), Linux and macOS are published on the
+[Releases](https://github.com/Churikov0112/GameplayFootball/releases) page —
+self-contained archives, no installation required. Packaging scripts live in
+`tools/release/` (see `tools/release/README.md`).
+
 ## Problems?
 
 If you have any problems, please open an issue.
