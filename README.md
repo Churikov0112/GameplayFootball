@@ -23,7 +23,10 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
   presets switched on the controller-select screen (LB/RB), menu navigation from stick and D-pad,
   and hot-plug (plug/unplug mid-match pauses and opens controller select).
 - Determinism tooling: `tools/determinism` runs the match headless and fingerprints the simulation
-  (SHA-1) to catch unintended gameplay changes. Platform references live in `tools/determinism/`.
+  (SHA-1) to catch unintended gameplay changes. The mechanism — `EnvState` serialization, fixed
+  10 ms timestep, seeded RNG, mock renderer/audio — is ported from Google Research Football
+  (the `google-brain` branch, GRF v2.10.1) without importing its gameplay changes. Platform
+  references live in `tools/determinism/`.
 - Project documentation lives in the wiki: `docs/wiki/index.md`.
 
 ## Building from source
