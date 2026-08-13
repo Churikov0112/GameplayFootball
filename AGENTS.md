@@ -10,9 +10,9 @@ This file provides guidance to agents working with code in this repository.
 можно большем числе платформ. Движок «Blunted2» лежит в репозитории (`src/base`, `src/types`, `src/scene`,
 `src/systems`, `src/managers`, `src/framework`); игра поверх него — `src/onthepitch`, `src/menu`, `src/league`, `src/data`.
 Windows: локально x86 (Win32). macOS: запускается (подтверждено 2026-08-13 на
-MacBook Air M2): окно/GL-контекст и прокачка событий в main thread, шедулер — в
-вспомогательном `boost::thread`. Известен визуальный дефект: поле и часть текстур
-чёрные — см. [[открытые-вопросы]].
+MacBook Air M2): окно/GL-контекст и прокачка событий в main thread, шедулер — во
+вспомогательном `boost::thread`. Готовый `.app`-бандл собирается
+`tools/release/package_macos.sh` — см. [[релиз]].
 
 **Актуальная картина проекта живёт в вики: `docs/wiki/index.md` — начинать оттуда.** Этот файл
 несёт только то, что сломаешь, *не зная, где посмотреть*; предметные детали — в вики, а
@@ -57,6 +57,13 @@ Get/Process/Put и буферами (см. `docs/wiki/матч`). AI игрок�
   не вливай их целиком в `master` без разбора.
 - **`dataSetSortable`** (закомментирован в `src/gamedefines.hpp:70`) меняет тип `DataSet`
   (std::list ↔ std::deque) — код под обоими собран не был.
+- **Упаковка macOS — только под bash 4.** `tools/release/package_macos.sh` использует
+  `declare -A`, а системный bash на macOS — 3.2; запускать через
+  `/opt/homebrew/bin/bash tools/release/package_macos.sh <ver>`. Игра резолвит пути
+  относительно CWD, а macOS стартует .app из `/`, поэтому в бандле настоящий бинарник
+  — `Contents/MacOS/gameplayfootball-bin`, а `gameplayfootball` — launcher, chdir'ящий в
+  `Contents/Resources/data` (иначе из Finder фатальная ошибка `file not found or empty:
+  football.config`). Детали и ловушки — см. [[релиз]].
 
 ## Сборка / запуск
 
@@ -87,8 +94,9 @@ cmake --build . --parallel --config Release
 
 **macOS**: собирается через brew (sdl3 sdl3_image sdl3_ttf boost openal-soft). Запускается
 (подтверждено 2026-08-13 на MacBook Air M2): окно/GL-контекст и прокачка событий в main
-thread, шедулер — во вспомогательном `boost::thread` (см. `src/main.cpp`). Известен
-визуальный дефект: поле и часть текстур чёрные — см. `docs/wiki/открытые-вопросы`.
+thread, шедулер — во вспомогательном `boost::thread` (см. `src/main.cpp`). Готовый .app:
+`/opt/homebrew/bin/bash tools/release/package_macos.sh <ver>` → `dist/GameplayFootball-v<ver>-macos-arm64.zip`
+(нужен bash 4, см. [[релиз]]).
 
 Проверка регрессии геймплея — вручную через `tools/determinism` (эталоны см.
 `docs/wiki/открытые-вопросы`). CI в GitHub нет.

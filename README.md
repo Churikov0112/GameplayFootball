@@ -76,6 +76,13 @@ cd build
 ./gameplayfootball
 ```
 
+To get a ready-to-run app without building, download the macOS zip from the
+[Releases](https://github.com/Churikov0112/GameplayFootball/releases) page — it is a
+double-clickable `GameplayFootball.app` with all data and runtime libraries bundled.
+The bundle is ad-hoc signed and **not notarized** (no Apple Developer account), so
+macOS shows a one-time warning on first launch: right-click the app → **Open**, or
+run `xattr -cr GameplayFootball.app`.
+
 ### Windows
 
 Download and install:
