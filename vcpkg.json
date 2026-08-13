@@ -1,0 +1,12 @@
+{
+  "name": "gameplayfootball",
+  "version-string": "0.3.0",
+  "dependencies": [
+    "sdl3",
+    { "name": "sdl3-image", "features": ["jpeg", "png"] },
+    "sdl3-ttf",
+    "boost",
+    "openal-soft",
+    "sqlite3"
+  ]
+}

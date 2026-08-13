@@ -52,7 +52,8 @@ Get/Process/Put и буферами (см. `docs/wiki/матч`). AI игрок�
   `boost::thread`. Не заменяй на std:: — код написан под boost.
 - **Windows**: инклюды вида `#include <SDL3/SDL.h>`; vcpkg-триплеты строго `x86-windows`;
   CMake — `CMAKE_GENERATOR_PLATFORM=Win32`; для MinGW в `main.cpp` стоит `#undef main`.
-  Игра — GUI (`WIN32`): в `src/main.cpp` собственная WinMain-заглушка (SDL3 не даёт SDLmain).
+  Игра — GUI (`WIN32`-подсистема) через опцию `GAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM` (по умолчанию ON;
+  OFF — консоль для дебага): в `src/main.cpp` собственная WinMain-заглушка (SDL3 не даёт SDLmain).
 - **`google_brain` и `windows` — чужие ветки.** Это форк Google Brain RL и отдельная Windows-линия;
   не вливай их целиком в `master` без разбора.
 - **`dataSetSortable`** (закомментирован в `src/gamedefines.hpp:70`) меняет тип `DataSet`
@@ -80,16 +81,16 @@ make -j$(nproc)
 ./gameplayfootball
 ```
 
-**Windows** (vcpkg, триплеты **обязательно** `x86-windows`):
+**Windows** (vcpkg, **manifest mode** через `vcpkg.json` в корне; триплет **обязательно**
+`x86-windows`, генератор `Win32`). Отдельный `vcpkg install` не нужен — зависимости ставятся
+при конфигурации CMake автоматически:
 
 ```bat
-.\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl3 sdl3-image[jpeg,png] sdl3-ttf openal-soft sqlite3
-xcopy /e /i data build\Debug
-xcopy /e /i data build\Release
 cd build
-cmake .. -DCMAKE_GENERATOR_PLATFORM=Win32 -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
+cmake .. -DGAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM=ON -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_GENERATOR_PLATFORM=Win32 -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
 cmake --build . --parallel --config Release
-:: запуск: gameplayfootball.exe внутри build\Release
+:: data/ копируется рядом с exe автоматически (POST_BUILD); запуск: gameplayfootball.exe внутри build\Release
+:: GAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM=OFF — собрать с консолью для дебага
 ```
 
 **macOS**: собирается через brew (sdl3 sdl3_image sdl3_ttf boost openal-soft). Запускается

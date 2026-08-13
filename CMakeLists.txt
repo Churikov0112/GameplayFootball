@@ -25,20 +25,53 @@ if(UNIX)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O3")
 endif(UNIX)
 
-# Find required libraries
-FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(SDL3 REQUIRED)
-FIND_PACKAGE(SDL3_image REQUIRED)
-FIND_PACKAGE(SDL3_ttf REQUIRED)
-# System/distro boost builds (Ubuntu libboost-all-dev, Homebrew) are done with b2,
-# which installs only the main BoostConfig.cmake and not the modular per-component
-# configs, so find_package(Boost COMPONENTS ...) fails against them. Force FindBoost's
-# manual search, which works with any boost layout. Boost.System is header-only since
-# 1.69 (no compiled lib ships anywhere), so it is not requested as a component.
-set(Boost_NO_BOOST_CMAKE ON)
-FIND_PACKAGE(Boost REQUIRED COMPONENTS thread filesystem)
-FIND_PACKAGE(OpenAL REQUIRED)
-FIND_PACKAGE(SQLite3 REQUIRED)
+# Find required libraries. Windows builds use vcpkg, which ships a modular CMake
+# config file for every dependency, so CONFIG mode is used there. System/distro
+# builds (Ubuntu libboost-all-dev, Homebrew) are done with b2, which installs only
+# the main BoostConfig.cmake and not the modular per-component configs, so
+# find_package(Boost COMPONENTS ...) fails against them: keep FindBoost's manual
+# search on non-Windows (it works with any boost layout). Boost.System is header-only
+# since 1.69 (no compiled lib ships anywhere), so it is not requested as a component.
+if(WIN32)
+  find_package(OpenGL REQUIRED)
+  find_package(SDL3 REQUIRED CONFIG)
+  find_package(SDL3_image REQUIRED CONFIG)
+  find_package(SDL3_ttf REQUIRED CONFIG)
+  find_package(Boost REQUIRED COMPONENTS thread filesystem CONFIG)
+  find_package(OpenAL REQUIRED CONFIG)
+  # vcpkg's sqlite3 ships its config under the unofficial name (there is no
+  # SQLite3Config.cmake), so request it explicitly.
+  find_package(unofficial-sqlite3 CONFIG REQUIRED)
+else()
+  find_package(OpenGL REQUIRED)
+  find_package(SDL3 REQUIRED)
+  find_package(SDL3_image REQUIRED)
+  find_package(SDL3_ttf REQUIRED)
+  set(Boost_NO_BOOST_CMAKE ON)
+  find_package(Boost REQUIRED COMPONENTS thread filesystem)
+  find_package(OpenAL REQUIRED)
+  find_package(SQLite3 REQUIRED)
+endif()
+
+# CONFIG mode does not set the *_INCLUDE_DIR / *_LIBRARY cache variables that the
+# Find modules provide, but the game libraries compile against these includes
+# directly (they do not link blunted2), so derive the missing values from the
+# imported targets.
+if(WIN32)
+  set(SQLite3_LINK_TARGET unofficial::sqlite3::sqlite3)
+  set(OPENAL_LIBRARY OpenAL::OpenAL)
+else()
+  set(SQLite3_LINK_TARGET SQLite::SQLite3)
+endif()
+if(NOT Boost_INCLUDE_DIR)
+  get_target_property(Boost_INCLUDE_DIR Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
+endif()
+if(NOT OPENAL_INCLUDE_DIR)
+  get_target_property(OPENAL_INCLUDE_DIR OpenAL::OpenAL INTERFACE_INCLUDE_DIRECTORIES)
+endif()
+if(NOT SQLITE3_INCLUDE_DIRS)
+  get_target_property(SQLITE3_INCLUDE_DIRS ${SQLite3_LINK_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+endif()
 
 # Blunted2 engine core: a single static library built from the former
 # object libraries (base, systems, loaders, types, framework, scene,
@@ -159,7 +192,7 @@ target_include_directories(blunted2 PUBLIC
         ${OPENAL_INCLUDE_DIR}
         ${SQLite3_INCLUDE_DIRS})
 target_link_libraries(blunted2 PUBLIC
-        Boost::filesystem Boost::thread SQLite::SQLite3
+        Boost::filesystem Boost::thread ${SQLite3_LINK_TARGET}
         SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf
         ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 if(UNIX)
@@ -258,7 +291,19 @@ apply_common_includes(gamecontextlib)
 
 set(LIBRARIES gamelib hidlib menulib datalib leaguelib gamecontextlib blunted2)
 
-add_executable(gameplayfootball WIN32
+# Build the game as a GUI application (WIN32 subsystem) so no console window
+# appears on Windows. Turn it off to keep a console for stdout/stderr debugging.
+option(GAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM "Build gameplayfootball as a Windows GUI application (WIN32 subsystem)" ON)
+
+# The game resolves all asset/database paths relative to the working directory,
+# so copy data/ next to the binary automatically (no manual xcopy/cp needed).
+function(copy_data_post_build target)
+  add_custom_command(TARGET ${target} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/data"
+                  "$<TARGET_FILE_DIR:${target}>")
+endfunction()
+
+add_executable(gameplayfootball
         src/misc/perlin.cpp
         src/misc/hungarian.c
         src/gametask.cpp
@@ -267,6 +312,10 @@ add_executable(gameplayfootball WIN32
         src/dbquery.cpp
         src/gamedefines.cpp)
 apply_common_includes(gameplayfootball)
+if(WIN32 AND GAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM)
+  set_target_properties(gameplayfootball PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+copy_data_post_build(gameplayfootball)
 # GNU ld resolves static library references left-to-right; the game libraries
 # have circular references (e.g. hidlib <-> gamecontextlib), so group them on
 # Linux. MSVC/ld64 tolerate the flat order.
@@ -292,3 +341,4 @@ if(UNIX AND NOT APPLE)
 else()
   target_link_libraries(determinism_runner PRIVATE ${LIBRARIES})
 endif()
+copy_data_post_build(determinism_runner)

@@ -94,24 +94,23 @@ Download and install:
 - [CMake](https://cmake.org/download/) (make sure to add it to the system PATH).
 
 Install [`vcpkg`](https://github.com/microsoft/vcpkg) as explained in the
-[Quick Start Guide](https://github.com/microsoft/vcpkg#quick-start-windows). Install the dependencies
-(all triplets **must be `x86-windows`**):
-```bat
-.\vcpkg.exe install --triplet x86-windows boost:x86-windows sdl3 sdl3-image[jpeg,png] sdl3-ttf openal-soft sqlite3
-```
+[Quick Start Guide](https://github.com/microsoft/vcpkg#quick-start-windows). Dependencies are
+declared in `vcpkg.json` (manifest mode) and installed automatically by CMake — no manual
+`vcpkg install` is needed.
 
 Build and run:
 ```bat
 git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
 
-cmake -B build -A Win32 -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
+cmake -B build -A Win32 -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
 cmake --build build --config Release --parallel
-
-xcopy /e /i data build\Release
 ```
 
-Run `gameplayfootball.exe` inside `build\Release` (the game uses relative data paths).
+The `data/` directory is copied next to the binary automatically (POST_BUILD), so `gameplayfootball.exe`
+inside `build\Release` can be run directly (the game uses relative data paths). By default the game is
+built as a GUI application (WIN32 subsystem); pass `-DGAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM=OFF` to keep a
+console for debugging.
 
 ## Releases
 

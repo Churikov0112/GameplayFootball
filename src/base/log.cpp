@@ -48,13 +48,6 @@ namespace blunted {
 
     if (logType == e_FatalError) {
       LogClose();
-
-#ifndef NDEBUG
-      // for gdb backtracing
-      int *foo = (int*)-1; // make a bad pointer
-      printf("%d\n", *foo); // causes segfault
-#endif
-
       exit(1);
     }
   }

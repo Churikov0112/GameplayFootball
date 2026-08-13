@@ -4,8 +4,10 @@
 #   powershell -ExecutionPolicy Bypass -File tools/release/package_windows.ps1 -Version 0.3.0 -Arch x86
 #   powershell -ExecutionPolicy Bypass -File tools/release/package_windows.ps1 -Version 0.3.0 -Arch x64
 #
-# Assumes the game was already built (build\Release for x86, build-x64\Release for x64)
-# and that vcpkg packages for the matching triplet are installed.
+# Assumes the game was already built (build\Release for x86, build-x64\Release for x64).
+# Dependencies come from vcpkg in manifest mode and live in
+# <build-dir>\vcpkg_installed\<triplet>\bin; the classic install root
+# ($VcpkgRoot\installed\<triplet>) is used as a fallback.
 
 param(
   [Parameter(Mandatory = $true)][string]$Version,
@@ -40,7 +42,10 @@ Copy-Item -Recurse -Force data\* $stage
 
 # dependency DLLs (transitive closure, resolved with dumpbin during the first
 # release; boost/VC names carry the compiler + toolset so match by wildcard)
-$vcpkgBin = Join-Path $VcpkgRoot "installed\$triplet\bin"
+$vcpkgBin = Join-Path $BuildDir "vcpkg_installed\$triplet\bin"
+if (-not (Test-Path $vcpkgBin)) {
+  $vcpkgBin = Join-Path $VcpkgRoot "installed\$triplet\bin"
+}
 $dllNames = @(
   'SDL3.dll', 'SDL3_image.dll', 'SDL3_ttf.dll', 'OpenAL32.dll', 'sqlite3.dll',
   'jpeg62.dll', 'libpng16.dll', 'freetype.dll', 'z.dll', 'bz2.dll',

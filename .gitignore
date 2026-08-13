@@ -1,3 +1,14 @@
 *build*/
 .idea/
 dist/
+
+# vcpkg manifest mode
+vcpkg_installed/
+
+# Visual Studio output / intermediate dirs
+out/
+.vs/
+Release/
+Debug/
+x64/
+Win32/

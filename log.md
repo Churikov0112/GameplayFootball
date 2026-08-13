@@ -222,3 +222,17 @@ Resources/data (см. docs/wiki/открытые-вопросы.md).
 загрузка GameplayFootball-v0.3.0-macos-arm64.zip на release v0.3.0, обновление
 docs/wiki/открытые-вопросы.md. Незакоммиченные изменения на выходе: tools/release/package_macos.sh,
 docs/wiki/открытые-вопросы.md, log.md. Ветка — detached HEAD на v0.3.0.
+
+## [2026-08-13] feat | Windows-сборка на vcpkg manifest mode
+Windows переведён с классического `vcpkg install` на manifest mode (`vcpkg.json` в корне: sdl3,
+sdl3-image[jpeg,png], sdl3-ttf, boost, openal-soft, sqlite3; отдельный install не нужен —
+зависимости ставятся при конфигурации CMake). Под Windows `find_package` работает в CONFIG-режиме
+(SDL3/SDL3_image/SDL3_ttf/Boost/OpenAL/unofficial-sqlite3), под остальными ОС сохранён модульный
+режим и `Boost_NO_BOOST_CMAKE=ON` (дистрибутивный Boost b2 не даёт компонентных конфигов).
+Добавлены: POST_BUILD-копия `data/` рядом с exe (ручные `xcopy`/`cp` больше не нужны),
+опция `GAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM` (по умолчанию ON — GUI; OFF — консоль для дебага),
+убран форс-сегфолт при `e_FatalError` в debug-сборке (`src/base/log.cpp`). `package_windows.ps1`
+берёт DLL из `build/vcpkg_installed/<triplet>/bin`. Проверено: Windows x86 (MSVC 14.44, VS2022
+Build Tools, триплет `x86-windows`) — конфигурация, сборка, запуск до главного меню, оба состояния
+subsystem-опции; `determinism_runner check 372c4bbd...` → 0; Linux (gcc, Ubuntu 26.04 через WSL2) —
+сборка и `determinism_runner check a672aa0b...` → 0.
