@@ -264,3 +264,29 @@ SetEventJoyButtons и ломало всю GUI-навигацию; `settings.cpp`
 `7b1c49832d6961d27992141d86f00dc710b67016` (MacBook Air M2, AppleClang), воспроизводим между
 запусками и пересборками. Побочно вскрыт косметический баг `resourcemanagerpool.hpp:41` —
 `"..." + resourceType` сдвигает указатель вместо конкатенации (печатает мусор в FATAL-логе).
+
+## [2026-08-13] session | Проверка ветки build-and-input-fixes на macOS (M2)
+Подтверждено на MacBook Air M2, сборка Release, AppleClang, `--parallel 1`:
+- **Сборка зелёная** после перевода find_package в модульный режим на всех платформах
+  (`CMakeLists.txt`: FindOpenAL/FindSQLite3; SDL3* — fallback на CONFIG; платформенными остались
+  Boost и SQLite). Предупреждений об ошибках нет; единственный warning — CMake author-warning о
+  deprecated-имени `SQLite::SQLite3` (цель просит переименование в `SQLite3::SQLite3`) — не блокер.
+- **POST_BUILD-копия data/ работает**: в `build/` автоматически появились `databases/`,
+  `football.config`, `media/` — ручной `cp -R data/. build` больше не нужен (проверено
+  пересборкой на месте, данные до/после в `build/`).
+- **Детерминизм**: `cd build && ./determinism_runner check 7b1c49832d6961d27992141d86f00dc710b67016`
+  → хэш совпал, код выхода 0. Эталон arm64 не изменился после реструктуризации сборки —
+  «геймплей не изменился» подтверждено (обновлена `docs/wiki/открытые-вопросы.md`).
+- **Запуск**: окно 1280×752, GL 4.1 (Metal), GraphicsSystem/AudioSystem/MenuScene, рендер идёт,
+  `Framebuffer state #36053` в норме, в stdout только безобидный GL debug-шум Metal
+  («GLD_TEXTURE_INDEX_2D … unloadable»). Чистый выход подтверждён: штатный путь
+  Exit→`QuitGame`→`SignalQuit` останавливает scheduler, main шлёт `Message_Shutdown`, рендер
+  завершается с `Shutting down OpenGLRenderer3D thread`; деструкторы WorkerThread, blunted::Exit
+  cleanup, без [ERROR]/FATAL/сегфолтов.
+- **Нюанс выхода на macOS** (существующее поведение, не из ветки): одно закрытие окна
+  (`SDL_EVENT_QUIT`) останавливает только рендер-цикл — scheduler продолжает жить и
+  `schedulerThread.join()` висит; полное завершение идёт только через Exit в меню (`SignalQuit`).
+- **Геймпад (пункт 5) физически не проверен** — контроллер к машине не подключён. Код-ревью
+  подтверждает: дефолты confirm/back в `guitask.cpp` — `SDL_GAMEPAD_BUTTON_SOUTH/EAST` (A=B);
+  `GAMEPAD_ADDED/REMOVED` обрабатываются вне фокуса окна (`opengl_renderer3d.cpp:2025`). Запуск
+  без геймпада при этом не сломан (проверено запуском выше).
