@@ -290,3 +290,22 @@ SetEventJoyButtons и ломало всю GUI-навигацию; `settings.cpp`
   подтверждает: дефолты confirm/back в `guitask.cpp` — `SDL_GAMEPAD_BUTTON_SOUTH/EAST` (A=B);
   `GAMEPAD_ADDED/REMOVED` обрабатываются вне фокуса окна (`opengl_renderer3d.cpp:2025`). Запуск
   без геймпада при этом не сломан (проверено запуском выше).
+
+## [2026-08-13] deploy | macOS-релиз v0.3.1: .app-бандл собран, проверен, загружен
+Собрано на MacBook Air M2 с тега v0.3.1 (detached HEAD, рабочее дерево чистое), Release,
+`cmake --build build --parallel 1`, депсы brew (sdl3 sdl3_image sdl3_ttf boost openal-soft).
+`cmake -B build` — только author-warning о deprecated-имени `SQLite::SQLite3` (не блокер);
+POST_BUILD-копия работает: в `build/` `media/`, `databases/`, `football.config` без ручного cp.
+Детерминизм: `./determinism_runner check 7b1c49832d6961d27992141d86f00dc710b67016` — хэш совпал
+с эталоном arm64, код выхода 0. Смоук: старт, окно (GL 4.1 Metal), MenuScene отрисован; выход
+по SIGTERM (SDL переводит в SDL_EVENT_QUIT) — штатное `Shutting down OpenGLRenderer3D thread`,
+без [ERROR]/FATAL; зависание scheduler'а после этого — уже документированный нюанс macOS
+(полный выход — только Exit в меню, см. запись от 2026-08-13). Упаковка
+`/opt/homebrew/bin/bash tools/release/package_macos.sh 0.3.1 build` (bash 5, `declare -A`):
+35 dylib в `Contents/Frameworks`, launcher + `-bin`. Проверка пакета из распакованного zip:
+`otool -L` — только `@executable_path/../Frameworks` + системные, без /opt/homebrew и @rpath
+во всех dylib; `codesign --verify --deep --strict` OK (adhoc, не нотаризован); запуск .app через
+launcher из чистой распаковки — меню работает, лог пишется внутрь бандла, ошибок нет.
+Загружен `gh release upload v0.3.1 dist/GameplayFootball-v0.3.1-macos-arm64.zip`
+(23 772 063 байт), `gh release view` — ассет на месте (macOS артефакт v0.3.1 стал доступен,
+Windows x86/x64 и Linux были уже загружены). Код не менялся — вики не затронута.
