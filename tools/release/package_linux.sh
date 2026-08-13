@@ -28,9 +28,12 @@ Gameplay Football - portable Linux build (x86_64)
 Run from a terminal:
     ./gameplayfootball
 
-Dependencies (Ubuntu 24.04+ / 26.04):
-    sudo apt-get install libsdl3-0 libsdl3-image libsdl3-ttf libopenal1 \
-        libboost-filesystem1.83.0 libboost-thread1.83.0 libsqlite3-0
+This archive contains the game binary and its data only; it is NOT fully
+self-contained. It was built on Ubuntu 26.04 LTS (SDL3 apt packages exist
+since Ubuntu 26.04), so run it on Ubuntu 26.04+ and install the runtime
+libraries first:
+    sudo apt-get install libsdl3-0 libsdl3-image0 libsdl3-ttf0 libopenal1 \
+        libboost-filesystem1.90.0 libboost-thread1.90.0 libsqlite3-0
 
 The game stores its save/league database next to the executable (databases/).
 EOF
