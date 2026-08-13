@@ -120,6 +120,17 @@ inside `build\Release` can be run directly (the game uses relative data paths). 
 built as a GUI application (WIN32 subsystem); pass `-DGAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM=OFF` to keep a
 console for debugging.
 
+## Verified dependency versions
+
+Each platform pins its own dependency versions; watch for behavior differences when migrating
+(e.g. the SDL3 semantic button names A/B aliases vs SOUTH/EAST exist only in some versions):
+
+- vcpkg `x86-windows`: sdl3 3.4.12, sdl3-image 3.4.4, sdl3-ttf 3.2.2, openal-soft 1.25.1,
+  boost 1.91.0, sqlite3 3.53.4
+- Ubuntu 26.04: libsdl3-dev 3.4.2, libsdl3-image-dev 3.4.0, libsdl3-ttf-dev 3.2.2,
+  libopenal-dev 1.25.1, boost 1.90.0, libsqlite3-dev 3.46.1
+- brew (MacBook Air M2, 2026-08-13): sdl3 3.4.14, sdl3_image, sdl3_ttf, boost 1.90, openal-soft
+
 ## Releases
 
 Prebuilt binaries for Windows (x86/x64), Linux and macOS are published on the
