@@ -29,7 +29,19 @@ STAGE="$(mktemp -d)/$APP"
 CONTENTS="$STAGE/Contents"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources/data" "$CONTENTS/Frameworks"
 
-cp "$BIN" "$CONTENTS/MacOS/gameplayfootball"
+# The game resolves all paths (football.config, databases/, media/, log.txt)
+# relative to the CWD, but macOS launches a .app bundle from "/". So the
+# real binary is renamed to gameplayfootball-bin and a launcher script takes
+# its place: it chdir's into Contents/Resources/data before exec'ing the game,
+# making the bundle double-clickable.
+cp "$BIN" "$CONTENTS/MacOS/gameplayfootball-bin"
+cat > "$CONTENTS/MacOS/gameplayfootball" <<'EOF'
+#!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$DIR/../Resources/data" || exit 1
+exec "$DIR/gameplayfootball-bin" "$@"
+EOF
+chmod +x "$CONTENTS/MacOS/gameplayfootball"
 cp -R "$BUILD_DIR/media" "$BUILD_DIR/databases" "$BUILD_DIR/football.config" "$CONTENTS/Resources/data"
 
 # --- bundle runtime dylibs ------------------------------------------------
@@ -37,11 +49,15 @@ cp -R "$BUILD_DIR/media" "$BUILD_DIR/databases" "$BUILD_DIR/football.config" "$C
 # bundled copies (Contents/Frameworks) so the app is self-contained.
 
 brew_prefix="$(brew --prefix)"
+brew_lib="$brew_prefix/lib"
 
 collect_deps() {
-  # $1 = binary/dylib path; prints absolute paths of non-system dylibs
+  # $1 = binary/dylib path; prints absolute paths of non-system dylibs.
+  # Resolves @rpath/@loader_path against the Homebrew lib dir (brew dylibs
+  # are installed with @rpath and runpath @loader_path/../lib -> /opt/homebrew/lib).
   otool -L "$1" | awk 'NR>1 {print $1}' | grep -v '^/System/' | grep -v '^/usr/lib/' \
-    | grep -v '^@' | sort -u
+    | grep -v '^@executable_path' \
+    | sed -e "s#^@rpath/#$brew_lib/#" -e "s#^@loader_path/#$brew_lib/#" | sort -u
 }
 
 # first pass: deps of the binary
@@ -54,7 +70,7 @@ while :; do
       seen[$d]=1
       # copy to Frameworks, keeping the leaf name
       name="$(basename "$d")"
-      cp -L "$d" "$CONTENTS/Frameworks/$name"
+      cp -Lf "$d" "$CONTENTS/Frameworks/$name"
       for sub in $(collect_deps "$d"); do
         next="$next $sub"
       done
@@ -64,20 +80,17 @@ while :; do
   if [[ -z "$deps" ]]; then break; fi
 done
 
-# rewrite install names: binary -> bundled dylibs
-for d in "${!seen[@]}"; do
-  install_name_tool -change "$d" "@executable_path/../Frameworks/$(basename "$d")" \
-    "$CONTENTS/MacOS/gameplayfootball"
+# rewrite install names in the binary: every non-system dep -> bundled dylib
+for ref in $(otool -L "$BIN" | awk 'NR>1 {print $1}' | grep -v '^/System/' | grep -v '^/usr/lib/'); do
+  install_name_tool -change "$ref" "@executable_path/../Frameworks/$(basename "$ref")" \
+    "$CONTENTS/MacOS/gameplayfootball-bin"
 done
-# rewrite dependencies *between* bundled dylibs and their own @rpath ids
+# rewrite the -id and dependencies *between* bundled dylibs
 for d in "${!seen[@]}"; do
   fw="$CONTENTS/Frameworks/$(basename "$d")"
-  id="$(otool -D "$d" | tail -1)"
-  if [[ "$id" != "$d" ]]; then
-    install_name_tool -id "@executable_path/../Frameworks/$(basename "$d")" "$fw"
-  fi
-  for sub in $(collect_deps "$d"); do
-    install_name_tool -change "$sub" "@executable_path/../Frameworks/$(basename "$sub")" "$fw"
+  install_name_tool -id "@executable_path/../Frameworks/$(basename "$d")" "$fw"
+  for ref in $(otool -L "$fw" | awk 'NR>1 {print $1}' | grep -v '^/System/' | grep -v '^/usr/lib/' | grep -v '^@executable_path'); do
+    install_name_tool -change "$ref" "@executable_path/../Frameworks/$(basename "$ref")" "$fw"
   done
 done
 
@@ -103,11 +116,13 @@ cat > "$CONTENTS/Info.plist" <<EOF
 EOF
 
 # --- sign (ad-hoc) ---------------------------------------------------------
-codesign --force --deep --sign - "$APP" --preserve-metadata=entitlements,flags 2>/dev/null \
-  || codesign --force --deep --sign - "$APP"
+STAGE_DIR="$(dirname "$STAGE")"
+( cd "$STAGE_DIR" && codesign --force --deep --sign - "$APP" --preserve-metadata=entitlements,flags ) 2>/dev/null \
+  || ( cd "$STAGE_DIR" && codesign --force --deep --sign - "$APP" )
 
 mkdir -p "$DIST_DIR"
+ROOT="$(pwd)"
 out="$DIST_DIR/GameplayFootball-v${VERSION}-macos-${ARCH}.zip"
-( cd "$(dirname "$STAGE")" && ditto -c -k --sequesterRsrc --keepParent "$APP" "$OLDPWD/$out" ) 2>/dev/null \
-  || ( cd "$(dirname "$STAGE")" && zip -r "$OLDPWD/$out" "$APP" >/dev/null )
+( cd "$STAGE_DIR" && ditto -c -k --sequesterRsrc --keepParent "$APP" "$ROOT/$out" ) 2>/dev/null \
+  || ( cd "$STAGE_DIR" && zip -r "$ROOT/$out" "$APP" >/dev/null )
 echo "Created $out"
