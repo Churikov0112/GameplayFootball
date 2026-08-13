@@ -251,3 +251,16 @@ subsystem-опции; `determinism_runner check 372c4bbd...` → 0; Linux (gcc, 
 (`main.cpp` использовал `controllers.at(0)` = клавиатура вместо `at(1)`, что давало UB в
 SetEventJoyButtons и ломало всю GUI-навигацию; `settings.cpp` аналогично). Проверено вручную:
 главное меню/пауза с геймпадом, hot-plug на выборе сторон; детерминизм Windows `372c4bbd...` → 0.
+
+## [2026-08-13] fix | macOS: починен headless determinism_runner, снят эталон arm64
+`determinism_runner run` на macOS падал на «Generating pitch» с
+`FATAL [ResourceManagerPool::GetManager]: ld not find manager for type` (EXIT=139) — хэш не
+снимался. Причина: `InitGameContext` (`gamecontext.cpp`) на `__APPLE__` не вызывает
+`InitGameSystems` (создание graphics/audio вынесено в `src/main.cpp`, main-thread), а раннер идёт
+без `main()` — менеджеры `Texture`/`VertexBuffer`/`AudioSoundBuffer` не регистрировались.
+Фикс в `tools/determinism/main.cpp` под `#ifdef __APPLE__`: раннер сам вызывает `InitGameSystems`
+и запускает mock-рендерер в потоке (`graphicsSystem->GetRenderer3D()->Run()`). Windows/Linux
+не затронуты (правка изолирована Apple-веткой). Эталон `reference-macos-arm64.txt` =
+`7b1c49832d6961d27992141d86f00dc710b67016` (MacBook Air M2, AppleClang), воспроизводим между
+запусками и пересборками. Побочно вскрыт косметический баг `resourcemanagerpool.hpp:41` —
+`"..." + resourceType` сдвигает указатель вместо конкатенации (печатает мусор в FATAL-логе).

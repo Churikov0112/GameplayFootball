@@ -56,6 +56,18 @@ int main(int argc, char **argv) {
   config.Set("match_duration", 1.0f);
 
   Initialize(config);
+
+#ifdef __APPLE__
+  // macOS: InitGameContext does not create the graphics/audio systems (they are
+  // created on the main thread by src/main.cpp before the scheduler thread
+  // starts). The headless runner has no main() render loop, so create the
+  // systems explicitly and run the (mock) renderer on a helper thread to drain
+  // its message queue; without this the Texture/VertexBuffer/AudioSoundBuffer
+  // resource managers never get registered and Match construction fails.
+  if (!InitGameSystems(config)) ::exit(1);
+  graphicsSystem->GetRenderer3D()->Run();
+#endif
+
   if (!InitGameContext(config)) ::exit(1);
 
   // GameTask + MenuTask (needed by Match's constructor via GetMenuTask()).
