@@ -11,6 +11,10 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
 ### What this fork adds
 
 - Modern build: CMake 3.16+, C++17, a single static `blunted2` engine library, `sources.cmake` removed.
+  On Windows the dependencies are declared in `vcpkg.json` (manifest mode) and installed automatically
+  by CMake — no manual `vcpkg install` is needed; `data/` is copied next to the binary automatically
+  (POST_BUILD) on every platform; the game builds as a GUI app (WIN32 subsystem) by default, with an
+  option (`GAMEPLAYFOOTBALL_WINDOWS_SUBSYSTEM=OFF`) to keep a console for debugging.
 - SDL2 → SDL3 (SDL3_image/SDL3_ttf; SDL_gfx dropped).
 - Renderer migrated to **OpenGL 3.2 core profile**: legacy fixed-function pipeline
   (`glBegin`/`glEnd`, `glLightfv`, matrix stack) removed; rendering runs through the shader
@@ -21,7 +25,10 @@ updated the libraries, but threw away everything (menus, audio, HUD) that was no
 - **Gamepad input reworked** (SDL3 `SDL_Gamepad`): semantic `SDL_GAMEPAD_BUTTON_*`/`AXIS_*` indices
   instead of raw joystick numbers (this fixes Xbox Series and any modern controller), PES/FIFA layout
   presets switched on the controller-select screen (LB/RB), menu navigation from stick and D-pad,
-  and hot-plug (plug/unplug mid-match pauses and opens controller select).
+  and hot-plug (plug/unplug mid-match pauses and opens controller select). Menus use the standard
+  layout (A = confirm, B = back) even with a single gamepad, and hot-plug also works on the
+  controller-select screen before a match (device add/remove is tracked even when the window is
+  not focused).
 - Determinism tooling: `tools/determinism` runs the match headless and fingerprints the simulation
   (SHA-1) to catch unintended gameplay changes. The mechanism — `EnvState` serialization, fixed
   10 ms timestep, seeded RNG, mock renderer/audio — is ported from Google Research Football
@@ -46,15 +53,18 @@ Build and run:
 git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
 
-# Configure, build, and copy the data next to the binaries
+# Configure and build (data/ is copied next to the binary automatically)
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
-cp -R data/. build/
 
 # Run from the build directory (the game uses relative data paths)
 cd build
 ./gameplayfootball
 ```
+
+The game also runs under WSL2 via WSLg (window and audio work; rendering is software, so the FPS is
+low). On machines with an AMD GPU, the WSLg display server can crash on startup — workaround: add
+`[wsl2] gpuSupport=false` to `%UserProfile%\.wslconfig` and restart WSL (`wsl --shutdown`).
 
 ### macOS
 
@@ -66,15 +76,13 @@ AppKit); on low-RAM machines build with a single job (`cmake --build build --par
 # Install dependencies (requires brew)
 brew install git cmake sdl3 sdl3_image sdl3_ttf boost openal-soft
 
-# Clone and build
+# Clone and build (data/ is copied next to the binary automatically)
 git clone https://github.com/Churikov0112/GameplayFootball.git
 cd GameplayFootball
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)"
 cmake --build build --parallel 1
 
-# Copy the data next to the binary, then run from the build directory
-# (the game uses relative data paths)
-cp -R data/. build/
+# Run from the build directory (the game uses relative data paths)
 cd build
 ./gameplayfootball
 ```

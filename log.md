@@ -236,3 +236,18 @@ sdl3-image[jpeg,png], sdl3-ttf, boost, openal-soft, sqlite3; отдельный 
 Build Tools, триплет `x86-windows`) — конфигурация, сборка, запуск до главного меню, оба состояния
 subsystem-опции; `determinism_runner check 372c4bbd...` → 0; Linux (gcc, Ubuntu 26.04 через WSL2) —
 сборка и `determinism_runner check a672aa0b...` → 0.
+
+## [2026-08-13] session | vcpkg manifest + WSL-плейтест + фиксы геймпада в GUI
+Сессия: (1) Windows-сборка переведена на vcpkg manifest mode (см. запись feat выше), апстрим
+подтянут (релиз.md + macOS-упаковка), конфликт log.md разрешён; (2) Linux собран и запущен на WSL2
+через WSLg: вскрыт краш Xwayland на AMD-драйвере (`amdxc64.so`, segfault в `/mnt/wslg/stderr.log`)
+— workaround `[wsl2] gpuSupport=false` в `C:\Users\User\.wslconfig` (окно рендерится в COPY MODE с
+рамкой msrdc, это нормально), звук работает через PulseAudio WSLg (OpenAL pulse-бэкенд); (3) фиксы
+геймпада в GUI: дефолты подтверждение/назад в `guitask.cpp` были `(1,1)` = B/B, из-за чего с одним
+геймпадом B «выбирал», а назад не работал — теперь A/SOUTH = подтвердить, B/EAST = назад;
+горячее подключение/отключение: `GAMEPAD_ADDED/REMOVED` обрабатывались только при фокусе окна,
+пропущенное отключение навсегда оставляло «мёртвый» геймпад (экран выбора сторон зависал) —
+теперь события устройств обрабатываются всегда. По пути откачены две собственные ошибочные правки
+(`main.cpp` использовал `controllers.at(0)` = клавиатура вместо `at(1)`, что давало UB в
+SetEventJoyButtons и ломало всю GUI-навигацию; `settings.cpp` аналогично). Проверено вручную:
+главное меню/пауза с геймпадом, hot-plug на выборе сторон; детерминизм Windows `372c4bbd...` → 0.
